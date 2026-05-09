@@ -1,0 +1,1989 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HyperLingua</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { background:#09090f; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(10px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .fade-up { animation:fadeUp .25s ease forwards; }
+
+    .nav-btn { border-bottom:2px solid transparent; transition:color .2s,border-color .2s; }
+    .nav-btn.active { color:#818cf8; border-color:#818cf8; }
+
+    /* Bottom nav (mobile) */
+    .bot-btn { display:flex;flex-direction:column;align-items:center;justify-content:center;
+               flex:1;gap:3px;padding:8px 4px;color:#6b7280;
+               border-top:2px solid transparent;transition:color .2s,border-color .2s; }
+    .bot-btn.active { color:#818cf8;border-color:#818cf8; }
+    .bot-btn svg { width:22px;height:22px; }
+    .bot-btn span { font-size:10px;font-weight:500; }
+
+    /* Card flip */
+    .flip-scene { perspective:1000px; }
+    .flip-card  { position:relative;width:100%;height:100%;
+                  transform-style:preserve-3d;transition:transform .5s ease; }
+    .flip-card.flipped { transform:rotateY(180deg); }
+    .flip-face  { position:absolute;inset:0;
+                  backface-visibility:hidden;-webkit-backface-visibility:hidden; }
+    .flip-back  { transform:rotateY(180deg); }
+
+    /* Progress bar */
+    .srs-bar-fill { transition:width .4s ease; }
+
+    /* Island hover */
+    .island-card:hover { border-color:rgba(129,140,248,.35); }
+    .sentence-row:hover { background:rgba(129,140,248,.04); }
+
+    ::-webkit-scrollbar { width:4px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:#374151;border-radius:2px; }
+
+    /* Stat card glow on hover */
+    .stat-due:hover   { box-shadow:0 0 20px rgba(129,140,248,.15); }
+    .stat-new:hover   { box-shadow:0 0 20px rgba(52,211,153,.15); }
+    .stat-streak:hover{ box-shadow:0 0 20px rgba(251,191,36,.15); }
+
+    /* Rating buttons */
+    .btn-again { background:rgba(239,68,68,.12);  border:1px solid rgba(239,68,68,.25);  color:#f87171; }
+    .btn-again:hover  { background:rgba(239,68,68,.22); }
+    .btn-hard  { background:rgba(249,115,22,.12); border:1px solid rgba(249,115,22,.25); color:#fb923c; }
+    .btn-hard:hover   { background:rgba(249,115,22,.22); }
+    .btn-good  { background:rgba(59,130,246,.12); border:1px solid rgba(59,130,246,.25);  color:#60a5fa; }
+    .btn-good:hover   { background:rgba(59,130,246,.22); }
+    .btn-easy  { background:rgba(52,211,153,.12); border:1px solid rgba(52,211,153,.25);  color:#34d399; }
+    .btn-easy:hover   { background:rgba(52,211,153,.22); }
+
+    @keyframes wave {
+      0%,100% { transform:scaleY(.4); }
+      50%      { transform:scaleY(1.6); }
+    }
+    .wave-bar { animation:wave .9s ease-in-out infinite; }
+    .wave-bar:nth-child(2){ animation-delay:.12s; }
+    .wave-bar:nth-child(3){ animation-delay:.24s; }
+    .wave-bar:nth-child(4){ animation-delay:.36s; }
+    .wave-bar:nth-child(5){ animation-delay:.48s; }
+  </style>
+</head>
+<body class="text-gray-100 min-h-screen">
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 border-b border-gray-800"
+        style="background:rgba(9,9,15,.92);backdrop-filter:blur(8px)">
+  <div class="max-w-4xl mx-auto px-4 flex items-center justify-between h-14">
+    <span class="font-bold text-lg text-indigo-400 tracking-tight">⚡ HyperLingua</span>
+    <nav class="hidden sm:flex">
+      <button class="nav-btn active px-3 h-14 text-sm font-medium text-gray-400"
+              data-view="dashboard" onclick="nav('dashboard')">Dashboard</button>
+      <button class="nav-btn px-3 h-14 text-sm font-medium text-gray-400"
+              data-view="islands"   onclick="nav('islands')">Islands</button>
+      <button class="nav-btn px-3 h-14 text-sm font-medium text-gray-400"
+              data-view="shadowing" onclick="nav('shadowing')">Shadowing</button>
+      <button class="nav-btn px-3 h-14 text-sm font-medium text-gray-400"
+              data-view="recall"    onclick="nav('recall')">Review</button>
+    </nav>
+    <div class="flex items-center gap-1">
+    <button id="auth-nav-btn" onclick="openModal('modal-auth')"
+            class="relative text-gray-500 hover:text-gray-300 transition-colors p-1"
+            title="Account / Sync">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+      </svg>
+      <span id="auth-dot" class="hidden absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-emerald-400"></span>
+    </button>
+    <button onclick="openModal('modal-settings')"
+            class="text-gray-500 hover:text-gray-300 transition-colors p-1">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066
+             c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35
+             a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0
+             00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066
+             c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924
+             0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07
+             2.572-1.065z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+    </button>
+    </div>
+  </div>
+</header>
+
+<!-- Bottom nav (mobile only) -->
+<nav class="sm:hidden fixed bottom-0 inset-x-0 z-40 flex border-t border-gray-800"
+     style="background:rgba(9,9,15,.96);backdrop-filter:blur(8px);padding-bottom:env(safe-area-inset-bottom)">
+  <button class="bot-btn nav-btn active" data-view="dashboard" onclick="nav('dashboard')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+    </svg>
+    <span>Home</span>
+  </button>
+  <button class="bot-btn nav-btn" data-view="islands" onclick="nav('islands')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/>
+    </svg>
+    <span>Islands</span>
+  </button>
+  <button class="bot-btn nav-btn" data-view="shadowing" onclick="nav('shadowing')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+    </svg>
+    <span>Shadowing</span>
+  </button>
+  <button class="bot-btn nav-btn" data-view="recall" onclick="nav('recall')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+    </svg>
+    <span>Review</span>
+  </button>
+</nav>
+
+<main class="max-w-4xl mx-auto px-4 py-6 pb-24 sm:pb-6">
+
+<!-- ══════════════════════ DASHBOARD ══════════════════════ -->
+<div id="view-dashboard" class="fade-up">
+
+  <!-- SRS Stats – 3 big cards -->
+  <div class="grid grid-cols-3 gap-3 mb-6">
+    <div class="stat-due cursor-pointer rounded-2xl border border-gray-800 p-5 text-center transition-all"
+         style="background:#111117" onclick="nav('recall')">
+      <div id="dash-due" class="text-5xl font-bold text-indigo-400 tabular-nums mb-1">0</div>
+      <div class="text-xs text-gray-500 uppercase tracking-widest">Fällig</div>
+      <div class="text-xs text-gray-700 mt-1">zur Wiederholung</div>
+    </div>
+    <div class="stat-new cursor-pointer rounded-2xl border border-gray-800 p-5 text-center transition-all"
+         style="background:#111117" onclick="nav('recall')">
+      <div id="dash-new" class="text-5xl font-bold text-emerald-400 tabular-nums mb-1">0</div>
+      <div class="text-xs text-gray-500 uppercase tracking-widest">Neu</div>
+      <div class="text-xs text-gray-700 mt-1">noch nie geübt</div>
+    </div>
+    <div class="stat-streak rounded-2xl border border-gray-800 p-5 text-center transition-all"
+         style="background:#111117">
+      <div id="dash-streak" class="text-5xl font-bold text-amber-400 tabular-nums mb-1">0</div>
+      <div class="text-xs text-gray-500 uppercase tracking-widest">Streak</div>
+      <div class="text-xs text-gray-700 mt-1">Tage in Folge</div>
+    </div>
+  </div>
+
+  <!-- Start review button -->
+  <div id="dash-review-cta" class="mb-6">
+    <button onclick="nav('recall')"
+            class="w-full py-3.5 rounded-xl font-semibold text-base transition-colors bg-indigo-600 hover:bg-indigo-500 text-white">
+      Review starten →
+    </button>
+  </div>
+  <div id="dash-all-done" class="hidden mb-6 rounded-xl border border-gray-800 p-4 text-center text-sm text-gray-500"
+       style="background:#111117">
+    ✅ Alle Karten für heute erledigt – komm morgen wieder!
+  </div>
+
+  <!-- Method overview -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+    <div onclick="nav('islands')"
+         class="island-card cursor-pointer rounded-xl border border-gray-800 p-4 transition-all"
+         style="background:#111117">
+      <div class="text-2xl mb-2">🏝️</div>
+      <div class="font-semibold text-sm mb-1">1 · Language Islands</div>
+      <div class="text-xs text-gray-500 leading-relaxed">Sätze im Kontext sammeln</div>
+      <div id="dash-island-count" class="mt-2 text-xs text-indigo-400 font-medium"></div>
+    </div>
+    <div onclick="nav('shadowing')"
+         class="island-card cursor-pointer rounded-xl border border-gray-800 p-4 transition-all"
+         style="background:#111117">
+      <div class="text-2xl mb-2">🎙️</div>
+      <div class="font-semibold text-sm mb-1">2 · Shadowing</div>
+      <div class="text-xs text-gray-500 leading-relaxed">Hören &amp; nachsprechen</div>
+      <div class="mt-2 text-xs text-emerald-400 font-medium">TTS + Aussprache-Check</div>
+    </div>
+    <div onclick="nav('recall')"
+         class="island-card cursor-pointer rounded-xl border border-gray-800 p-4 transition-all"
+         style="background:#111117">
+      <div class="text-2xl mb-2">🧠</div>
+      <div class="font-semibold text-sm mb-1">3 · Active Recall</div>
+      <div class="text-xs text-gray-500 leading-relaxed">SM-2 Spaced Repetition</div>
+      <div id="dash-review-count" class="mt-2 text-xs text-amber-400 font-medium"></div>
+    </div>
+  </div>
+
+  <!-- Recent islands -->
+  <div class="flex items-center justify-between mb-3">
+    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-widest">Islands</h3>
+    <button onclick="nav('islands')" class="text-xs text-indigo-400 hover:text-indigo-300">Alle →</button>
+  </div>
+  <div id="dash-recent" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+</div>
+
+<!-- ══════════════════════ ISLANDS ══════════════════════ -->
+<div id="view-islands" class="hidden fade-up">
+  <div class="flex items-center justify-between mb-5">
+    <div>
+      <h2 class="text-2xl font-bold">Language Islands</h2>
+      <p class="text-sm text-gray-500 mt-0.5">Sätze im Kontext – keine Vokabellisten</p>
+    </div>
+    <button onclick="openAddIsland()"
+            class="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500
+                   text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      Neue Island
+    </button>
+  </div>
+  <div id="islands-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+
+  <!-- Island detail -->
+  <div id="island-detail" class="hidden">
+    <div class="rounded-2xl border border-gray-800 overflow-hidden" style="background:#111117">
+      <div class="p-5 border-b border-gray-800 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <button onclick="closeDetail()" class="text-gray-500 hover:text-gray-300 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <div>
+            <h3 id="detail-name" class="text-xl font-bold"></h3>
+            <p id="detail-meta" class="text-xs text-gray-500"></p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openAddSentence()"
+                  class="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500
+                         text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Satz
+          </button>
+          <button onclick="deleteIsland()" class="p-1.5 text-gray-600 hover:text-rose-400 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7
+                   m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div id="sentences-list" class="divide-y divide-gray-800/70"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ SHADOWING ══════════════════════ -->
+<div id="view-shadowing" class="hidden fade-up">
+  <h2 class="text-2xl font-bold mb-1">Shadowing</h2>
+  <p class="text-sm text-gray-500 mb-5">Hören, nachsprechen, Aussprache trainieren</p>
+
+  <div class="mb-3">
+    <label class="block text-xs text-gray-500 mb-1.5 uppercase tracking-widest">Island</label>
+    <select id="shadow-island-sel" onchange="loadShadowIsland()"
+            class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
+                   focus:border-indigo-500 focus:outline-none" style="background:#1a1a24">
+      <option value="">– wählen –</option>
+    </select>
+  </div>
+
+  <!-- Voice row -->
+  <div id="voice-row" class="hidden mb-5">
+    <div class="flex items-center justify-between mb-1.5">
+      <label class="text-xs text-gray-500 uppercase tracking-widest">Stimme</label>
+      <label class="flex items-center gap-1.5 cursor-pointer text-xs text-gray-600 select-none">
+        <input type="checkbox" id="voice-show-all" onchange="populateVoiceSel()"
+               class="w-3 h-3 rounded accent-indigo-500">
+        Alle anzeigen
+      </label>
+    </div>
+    <select id="voice-sel" onchange="saveVoicePref()"
+            class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
+                   focus:border-indigo-500 focus:outline-none" style="background:#1a1a24">
+      <option value="">– wird geladen –</option>
+    </select>
+    <p id="voice-hint" class="text-xs text-gray-700 mt-1.5"></p>
+  </div>
+
+  <div id="shadow-empty" class="text-center py-16 text-gray-600">
+    <div class="text-4xl mb-3">🎙️</div>
+    <p class="text-sm">Wähle eine Island</p>
+  </div>
+
+  <div id="shadow-player" class="hidden space-y-4">
+    <!-- Sentence card -->
+    <div class="rounded-2xl border border-gray-800 p-6" style="background:#111117">
+      <div class="flex items-center justify-between mb-4">
+        <span id="shadow-prog" class="text-xs text-gray-600 font-mono">1 / 1</span>
+        <div class="flex gap-2">
+          <button onclick="shadowPrev()" class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <button onclick="shadowNext()" class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="text-center mb-6">
+        <p id="shadow-sentence"    class="text-2xl font-medium text-gray-100 mb-2 leading-snug"></p>
+        <p id="shadow-translation" class="text-sm text-gray-500"></p>
+      </div>
+
+      <div class="flex items-center justify-center gap-6">
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-600">Speed</span>
+          <select id="tts-rate"
+                  class="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs
+                         text-gray-300 focus:outline-none">
+            <option value="0.5">0.5×</option>
+            <option value="0.75">0.75×</option>
+            <option value="1" selected>1×</option>
+            <option value="1.25">1.25×</option>
+          </select>
+        </div>
+
+        <button id="btn-play" onclick="playShadowTTS()"
+                class="w-14 h-14 bg-indigo-600 hover:bg-indigo-500 rounded-full
+                       flex items-center justify-center transition-colors shadow-lg">
+          <svg id="icon-play" class="w-6 h-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+          <svg id="icon-stop" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 24 24">
+            <rect x="6" y="6" width="12" height="12" rx="1"/>
+          </svg>
+        </button>
+
+        <div id="waveform" class="hidden flex items-end gap-0.5 h-8">
+          <div class="wave-bar w-1.5 bg-indigo-400 rounded-full" style="height:6px"></div>
+          <div class="wave-bar w-1.5 bg-indigo-400 rounded-full" style="height:6px"></div>
+          <div class="wave-bar w-1.5 bg-indigo-400 rounded-full" style="height:6px"></div>
+          <div class="wave-bar w-1.5 bg-indigo-400 rounded-full" style="height:6px"></div>
+          <div class="wave-bar w-1.5 bg-indigo-400 rounded-full" style="height:6px"></div>
+        </div>
+        <div id="waveform-placeholder" class="w-16"></div>
+      </div>
+    </div>
+
+    <!-- Pronunciation check -->
+    <div class="rounded-2xl border border-gray-800 p-5" style="background:#111117">
+      <h3 class="text-sm font-semibold text-gray-300 mb-3">Aussprache-Check</h3>
+      <div class="flex items-center gap-3 mb-4">
+        <button id="btn-record" onclick="toggleRec()"
+                class="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-700
+                       bg-gray-800 hover:bg-gray-700 text-sm font-medium transition-colors">
+          <span id="rec-dot" class="w-2.5 h-2.5 rounded-full bg-rose-500 flex-shrink-0"></span>
+          <span id="rec-label">Aufnehmen</span>
+        </button>
+        <p class="text-xs text-gray-600">Sprich den Satz nach</p>
+      </div>
+      <div id="pron-result" class="hidden rounded-xl p-4" style="background:#1a1a24">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-xs text-gray-500">Erkannt:</span>
+          <span id="pron-score" class="text-sm font-bold text-emerald-400"></span>
+        </div>
+        <p id="pron-text" class="text-sm text-gray-400 italic mb-3"></p>
+        <div class="h-1.5 rounded-full overflow-hidden bg-gray-700">
+          <div id="pron-bar" class="h-full rounded-full transition-all duration-700 bg-emerald-400"
+               style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ RECALL / SRS ══════════════════════ -->
+<div id="view-recall" class="hidden fade-up">
+
+  <!-- Setup screen -->
+  <div id="srs-setup">
+    <h2 class="text-2xl font-bold mb-1">Review</h2>
+    <p class="text-sm text-gray-500 mb-5">SM-2 Spaced Repetition – nur fällige Karten</p>
+
+    <div class="grid grid-cols-3 gap-3 mb-5">
+      <div class="rounded-xl border border-gray-800 p-4 text-center" style="background:#111117">
+        <div id="srs-due-count"  class="text-3xl font-bold text-indigo-400 tabular-nums">0</div>
+        <div class="text-xs text-gray-600 mt-1">Fällig</div>
+      </div>
+      <div class="rounded-xl border border-gray-800 p-4 text-center" style="background:#111117">
+        <div id="srs-new-count"  class="text-3xl font-bold text-emerald-400 tabular-nums">0</div>
+        <div class="text-xs text-gray-600 mt-1">Neu</div>
+      </div>
+      <div class="rounded-xl border border-gray-800 p-4 text-center" style="background:#111117">
+        <div id="srs-learn-count" class="text-3xl font-bold text-amber-400 tabular-nums">0</div>
+        <div class="text-xs text-gray-600 mt-1">Lernen</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5 uppercase tracking-widest">Island</label>
+        <select id="srs-island-sel"
+                class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
+                       focus:border-indigo-500 focus:outline-none" style="background:#1a1a24">
+          <option value="all">Alle Islands</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5 uppercase tracking-widest">Richtung</label>
+        <select id="srs-dir"
+                class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
+                       focus:border-indigo-500 focus:outline-none" style="background:#1a1a24">
+          <option value="target">Zielsprache → Deutsch</option>
+          <option value="native">Deutsch → Zielsprache</option>
+          <option value="random">Zufällig</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Voice row (Review) -->
+    <div id="srs-voice-row" class="hidden mb-5">
+      <div class="flex items-center justify-between mb-1.5">
+        <label class="text-xs text-gray-500 uppercase tracking-widest">Stimme</label>
+        <label class="flex items-center gap-1.5 cursor-pointer text-xs text-gray-600 select-none">
+          <input type="checkbox" id="srs-voice-show-all" onchange="populateSRSVoiceSel()"
+                 class="w-3 h-3 rounded accent-indigo-500">
+          Alle anzeigen
+        </label>
+      </div>
+      <select id="srs-voice-sel" onchange="saveSRSVoicePref()"
+              class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
+                     focus:border-indigo-500 focus:outline-none" style="background:#1a1a24">
+        <option value="">– wird geladen –</option>
+      </select>
+      <p id="srs-voice-hint" class="text-xs text-gray-700 mt-1.5"></p>
+    </div>
+
+    <div id="srs-no-cards" class="hidden mb-4 p-4 rounded-xl border border-gray-800 text-center
+                                   text-sm text-gray-500" style="background:#111117">
+      Keine fälligen Karten – super! Füge neue Sätze hinzu oder warte bis morgen.
+    </div>
+
+    <button id="srs-start-btn" onclick="startSRS()"
+            class="w-full py-3 rounded-xl font-semibold bg-indigo-600 hover:bg-indigo-500
+                   text-white transition-colors">
+      Session starten
+    </button>
+  </div>
+
+  <!-- Session screen -->
+  <div id="srs-session" class="hidden">
+    <!-- Progress bar -->
+    <div class="flex items-center gap-3 mb-4">
+      <button onclick="endSRS()" class="text-sm text-gray-500 hover:text-gray-300 transition-colors flex-shrink-0">
+        ← Ende
+      </button>
+      <div class="flex-1 h-1.5 rounded-full bg-gray-800 overflow-hidden">
+        <div id="srs-bar" class="srs-bar-fill h-full rounded-full bg-indigo-500" style="width:0%"></div>
+      </div>
+      <span id="srs-prog-label" class="text-xs text-gray-600 font-mono flex-shrink-0">0/0</span>
+    </div>
+
+    <!-- Card type badge -->
+    <div class="flex items-center gap-2 mb-3">
+      <span id="srs-card-type" class="text-xs px-2 py-0.5 rounded-full bg-gray-800 text-gray-500"></span>
+      <span id="srs-card-island" class="text-xs text-gray-700"></span>
+    </div>
+
+    <!-- Flip card -->
+    <div class="flip-scene mb-4" style="height:min(370px,52vh)">
+      <div id="srs-flip" class="flip-card h-full">
+
+        <!-- ── FRONT ── -->
+        <div class="flip-face rounded-2xl border border-gray-800 p-6 flex flex-col
+                    items-center" style="background:#111117">
+          <!-- Hint + sentence -->
+          <p id="srs-front-hint" class="text-xs text-gray-600 uppercase tracking-widest mb-3 mt-2"></p>
+          <p id="srs-front-text" class="text-2xl font-medium text-center text-gray-100
+                                        leading-snug mb-5 flex-1 flex items-center"></p>
+
+          <!-- Speech area -->
+          <div class="w-full mb-3">
+            <!-- Idle / recording state -->
+            <div id="srs-speech-idle" class="flex flex-col items-center gap-2">
+              <button id="srs-mic-btn" onclick="startSRSSpeech()"
+                      class="flex items-center gap-2 px-5 py-2.5 rounded-xl
+                             bg-rose-500/15 border border-rose-500/30 text-rose-400
+                             text-sm font-medium transition-colors hover:bg-rose-500/25">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4
+                       m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                </svg>
+                <span id="srs-mic-label">Jetzt sprechen</span>
+              </button>
+              <button onclick="skipSRSSpeech()"
+                      class="text-xs text-gray-600 hover:text-gray-400 transition-colors">
+                Überspringen →
+              </button>
+            </div>
+            <!-- Recognition result -->
+            <div id="srs-speech-result" class="hidden rounded-xl p-3" style="background:#1a1a24">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs text-gray-500">Erkannt:</span>
+                <span id="srs-speech-score" class="text-xs font-bold"></span>
+              </div>
+              <p id="srs-speech-text" class="text-xs text-gray-400 italic mb-2 truncate"></p>
+              <div class="h-1 rounded-full bg-gray-700 overflow-hidden">
+                <div id="srs-speech-bar"
+                     class="h-full rounded-full transition-all duration-700 bg-emerald-400"
+                     style="width:0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Auflösen button – disabled until speech done -->
+          <button id="srs-reveal-btn" onclick="flipSRSCard()" disabled
+                  class="w-full py-2.5 rounded-xl text-sm font-medium
+                         bg-gray-800 text-gray-600 cursor-not-allowed transition-colors">
+            Auflösen
+          </button>
+        </div>
+
+        <!-- ── BACK ── -->
+        <div class="flip-face flip-back rounded-2xl border border-indigo-500/20 p-6 flex flex-col
+                    items-center" style="background:#111117">
+          <!-- Translation -->
+          <div class="flex-1 flex items-center justify-center w-full">
+            <p id="srs-back-text"
+               class="text-xl font-medium text-center text-indigo-300 leading-snug"></p>
+          </div>
+
+          <!-- TTS indicator (visible while playing) -->
+          <div id="srs-tts-indicator"
+               class="flex items-center gap-2 text-xs text-gray-500 mb-3">
+            <div class="flex items-end gap-0.5 h-4">
+              <div class="wave-bar w-1 bg-indigo-400 rounded-full" style="height:4px"></div>
+              <div class="wave-bar w-1 bg-indigo-400 rounded-full" style="height:4px"></div>
+              <div class="wave-bar w-1 bg-indigo-400 rounded-full" style="height:4px"></div>
+              <div class="wave-bar w-1 bg-indigo-400 rounded-full" style="height:4px"></div>
+            </div>
+            Wird vorgelesen…
+          </div>
+
+          <!-- Rating buttons – hidden until TTS finishes -->
+          <div id="srs-rating-btns" class="hidden grid grid-cols-4 gap-2 w-full">
+            <button onclick="rateSRS(0)"
+                    class="btn-again rounded-xl py-3 text-center transition-colors">
+              <div class="text-xs font-bold mb-0.5">Nochmal</div>
+              <div id="lbl-again" class="text-xs opacity-70">&lt; 1 Min</div>
+            </button>
+            <button onclick="rateSRS(1)"
+                    class="btn-hard rounded-xl py-3 text-center transition-colors">
+              <div class="text-xs font-bold mb-0.5">Schwer</div>
+              <div id="lbl-hard" class="text-xs opacity-70">–</div>
+            </button>
+            <button onclick="rateSRS(2)"
+                    class="btn-good rounded-xl py-3 text-center transition-colors">
+              <div class="text-xs font-bold mb-0.5">Gut</div>
+              <div id="lbl-good" class="text-xs opacity-70">–</div>
+            </button>
+            <button onclick="rateSRS(3)"
+                    class="btn-easy rounded-xl py-3 text-center transition-colors">
+              <div class="text-xs font-bold mb-0.5">Einfach</div>
+              <div id="lbl-easy" class="text-xs opacity-70">–</div>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Mini stats row -->
+    <div class="flex gap-4 text-sm text-gray-600">
+      <span>Nochmal: <b id="ss-again" class="text-rose-400">0</b></span>
+      <span>Schwer: <b id="ss-hard"  class="text-orange-400">0</b></span>
+      <span>Gut: <b id="ss-good"     class="text-blue-400">0</b></span>
+      <span>Einfach: <b id="ss-easy" class="text-emerald-400">0</b></span>
+    </div>
+  </div>
+
+  <!-- Complete screen -->
+  <div id="srs-complete" class="hidden text-center py-10">
+    <div class="text-5xl mb-4">🎉</div>
+    <h3 class="text-2xl font-bold mb-1">Session abgeschlossen!</h3>
+    <p class="text-sm text-gray-500 mb-6">Active Recall mit SRS – das ist echter Lernfortschritt.</p>
+    <div class="grid grid-cols-4 gap-3 max-w-sm mx-auto mb-6">
+      <div class="rounded-xl border border-gray-800 p-3 text-center" style="background:#111117">
+        <div id="sc-again" class="text-xl font-bold text-rose-400">0</div>
+        <div class="text-xs text-gray-600">Nochmal</div>
+      </div>
+      <div class="rounded-xl border border-gray-800 p-3 text-center" style="background:#111117">
+        <div id="sc-hard"  class="text-xl font-bold text-orange-400">0</div>
+        <div class="text-xs text-gray-600">Schwer</div>
+      </div>
+      <div class="rounded-xl border border-gray-800 p-3 text-center" style="background:#111117">
+        <div id="sc-good"  class="text-xl font-bold text-blue-400">0</div>
+        <div class="text-xs text-gray-600">Gut</div>
+      </div>
+      <div class="rounded-xl border border-gray-800 p-3 text-center" style="background:#111117">
+        <div id="sc-easy"  class="text-xl font-bold text-emerald-400">0</div>
+        <div class="text-xs text-gray-600">Einfach</div>
+      </div>
+    </div>
+    <button onclick="endSRS()"
+            class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5
+                   rounded-xl font-medium transition-colors">
+      Zurück
+    </button>
+  </div>
+</div>
+
+</main>
+
+<!-- ══════════════════════ MODALS ══════════════════════ -->
+
+<!-- Add Island -->
+<div id="modal-island" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/60" style="backdrop-filter:blur(4px)"
+       onclick="closeModal('modal-island')"></div>
+  <div class="relative w-full max-w-md rounded-2xl border border-gray-700 p-6 fade-up"
+       style="background:#16161e">
+    <h3 class="text-lg font-semibold mb-4">Neue Island</h3>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">Thema / Name</label>
+        <input id="in-island-name" type="text" placeholder="z.B. Begrüßungen, Im Restaurant…"
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600
+                      border border-gray-700 focus:border-indigo-500 focus:outline-none"
+               style="background:#1f1f2b">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">Sprache</label>
+        <input id="in-island-lang" type="text" placeholder="z.B. Spanisch, Japanisch…"
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600
+                      border border-gray-700 focus:border-indigo-500 focus:outline-none"
+               style="background:#1f1f2b">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">TTS-Sprache</label>
+        <select id="in-island-tts"
+                class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200
+                       border border-gray-700 focus:border-indigo-500 focus:outline-none"
+                style="background:#1f1f2b">
+          <option value="es-ES">Spanisch (Spanien)</option>
+          <option value="es-MX">Spanisch (Mexiko)</option>
+          <option value="fr-FR">Französisch</option>
+          <option value="it-IT">Italienisch</option>
+          <option value="pt-BR">Portugiesisch (Brasilien)</option>
+          <option value="pt-PT">Portugiesisch (Portugal)</option>
+          <option value="en-US">Englisch (US)</option>
+          <option value="en-GB">Englisch (UK)</option>
+          <option value="de-DE">Deutsch</option>
+          <option value="ja-JP">Japanisch</option>
+          <option value="ko-KR">Koreanisch</option>
+          <option value="zh-CN">Chinesisch (Mandarin)</option>
+          <option value="ru-RU">Russisch</option>
+          <option value="ar-SA">Arabisch</option>
+          <option value="nl-NL">Niederländisch</option>
+          <option value="pl-PL">Polnisch</option>
+          <option value="tr-TR">Türkisch</option>
+          <option value="sv-SE">Schwedisch</option>
+          <option value="nb-NO">Norwegisch</option>
+          <option value="da-DK">Dänisch</option>
+        </select>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button onclick="closeModal('modal-island')"
+              class="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700
+                     text-gray-400 text-sm font-medium transition-colors">Abbrechen</button>
+      <button onclick="saveIsland()"
+              class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                     text-white text-sm font-medium transition-colors">Erstellen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Sentence -->
+<div id="modal-sentence" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/60" style="backdrop-filter:blur(4px)"
+       onclick="closeModal('modal-sentence')"></div>
+  <div class="relative w-full max-w-md rounded-2xl border border-gray-700 p-6 fade-up"
+       style="background:#16161e">
+    <h3 class="text-lg font-semibold mb-4">Satz hinzufügen</h3>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">Satz in Zielsprache</label>
+        <textarea id="in-sent-target" rows="2"
+                  placeholder="Der Satz in der Sprache, die du lernst…"
+                  class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600
+                         border border-gray-700 focus:border-indigo-500 focus:outline-none resize-none"
+                  style="background:#1f1f2b"></textarea>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">Deutsche Übersetzung</label>
+        <textarea id="in-sent-native" rows="2"
+                  placeholder="Die Bedeutung auf Deutsch…"
+                  class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600
+                         border border-gray-700 focus:border-indigo-500 focus:outline-none resize-none"
+                  style="background:#1f1f2b"></textarea>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">Kontext / Notiz (optional)</label>
+        <input id="in-sent-notes" type="text" placeholder="Wann / wie wird dieser Satz verwendet?"
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600
+                      border border-gray-700 focus:border-indigo-500 focus:outline-none"
+               style="background:#1f1f2b">
+      </div>
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button onclick="closeModal('modal-sentence')"
+              class="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700
+                     text-gray-400 text-sm font-medium transition-colors">Abbrechen</button>
+      <button onclick="saveSentence()"
+              class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                     text-white text-sm font-medium transition-colors">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Auth / Sync -->
+<div id="modal-auth" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/60" style="backdrop-filter:blur(4px)"
+       onclick="closeModal('modal-auth')"></div>
+  <div class="relative w-full max-w-md rounded-2xl border border-gray-700 p-6 fade-up"
+       style="background:#16161e">
+
+    <!-- Logged out -->
+    <div id="auth-logged-out">
+      <h3 class="text-lg font-semibold mb-1">Account</h3>
+      <p class="text-xs text-gray-500 mb-4">Einloggen um Daten geräteübergreifend zu synchronisieren</p>
+      <div class="space-y-3">
+        <input id="auth-email" type="email" placeholder="E-Mail"
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
+                      focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b">
+        <input id="auth-pass" type="password" placeholder="Passwort"
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
+                      focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b"
+               onkeydown="if(event.key==='Enter')loginUser()">
+        <p id="auth-error" class="text-xs text-rose-400 min-h-[16px]"></p>
+      </div>
+      <div class="flex gap-3 mt-4">
+        <button onclick="signupUser()"
+                class="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700
+                       text-gray-300 text-sm font-medium transition-colors">Registrieren</button>
+        <button id="auth-login-btn" onclick="loginUser()"
+                class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                       text-white text-sm font-medium transition-colors">Einloggen</button>
+      </div>
+    </div>
+
+    <!-- Logged in -->
+    <div id="auth-logged-in" class="hidden">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-9 h-9 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+          </svg>
+        </div>
+        <div>
+          <p id="auth-user-email" class="text-sm font-medium text-gray-200"></p>
+          <p class="text-xs text-gray-600">Letzter Sync: <span id="auth-last-sync">–</span></p>
+        </div>
+      </div>
+      <p id="auth-sync-status" class="text-xs text-emerald-400 mb-3 min-h-[16px]"></p>
+      <button id="auth-sync-btn" onclick="syncData()"
+              class="w-full mb-2 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                     text-white text-sm font-semibold transition-colors">
+        Jetzt synchronisieren
+      </button>
+      <button onclick="logoutUser()"
+              class="w-full py-2 rounded-xl bg-gray-800 hover:bg-gray-700
+                     text-gray-400 text-sm font-medium transition-colors">Ausloggen</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Settings -->
+<div id="modal-settings" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/60" style="backdrop-filter:blur(4px)"
+       onclick="closeModal('modal-settings')"></div>
+  <div class="relative w-full max-w-md rounded-2xl border border-gray-700 p-6 fade-up"
+       style="background:#16161e">
+    <h3 class="text-lg font-semibold mb-4">Einstellungen</h3>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">Neue Karten pro Tag (max.)</label>
+        <input id="set-new-per-day" type="number" min="1" max="100"
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200
+                      border border-gray-700 focus:border-indigo-500 focus:outline-none"
+               style="background:#1f1f2b">
+      </div>
+      <div class="pt-3 border-t border-gray-800">
+        <p class="text-xs text-gray-600 uppercase tracking-widest mb-3">Daten</p>
+        <button onclick="exportData()"
+                class="w-full mb-2 py-2 rounded-xl bg-gray-800 hover:bg-gray-700
+                       text-gray-300 text-sm font-medium transition-colors">Exportieren (JSON)</button>
+        <button onclick="triggerImport()"
+                class="w-full mb-2 py-2 rounded-xl bg-gray-800 hover:bg-gray-700
+                       text-gray-300 text-sm font-medium transition-colors">Importieren</button>
+        <input id="file-import" type="file" accept=".json" class="hidden" onchange="importData(event)">
+        <button onclick="clearData()"
+                class="w-full py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20
+                       text-rose-400 border border-rose-500/15 text-sm font-medium transition-colors">
+          Alle Daten löschen
+        </button>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button onclick="closeModal('modal-settings')"
+              class="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700
+                     text-gray-400 text-sm font-medium transition-colors">Abbrechen</button>
+      <button onclick="saveSettings()"
+              class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                     text-white text-sm font-medium transition-colors">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ JAVASCRIPT ══════════════════════ -->
+<script>
+// ── helpers ───────────────────────────────────────────────────
+const uid   = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const tdStr = () => new Date().toISOString().slice(0,10);
+const esc   = s  => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const addDays = (ts, d) => ts + d * 86400000;
+
+// ── storage ───────────────────────────────────────────────────
+const DB = {
+  islands()      { return JSON.parse(localStorage.getItem('hl_islands')  || '[]'); },
+  setIslands(v)  { localStorage.setItem('hl_islands',  JSON.stringify(v)); DB._touch(); },
+  settings()     { return JSON.parse(localStorage.getItem('hl_settings') || '{"newPerDay":20}'); },
+  setSettings(v) { localStorage.setItem('hl_settings', JSON.stringify(v)); DB._touch(); },
+  history()      { return JSON.parse(localStorage.getItem('hl_history')  || '{}'); },
+  setHistory(v)  { localStorage.setItem('hl_history',  JSON.stringify(v)); DB._touch(); },
+  _touch()       { localStorage.setItem('hl_updated_at', new Date().toISOString()); }
+};
+
+// ── supabase ──────────────────────────────────────────────────
+const SUPA_URL = 'https://qagtilwccropnumaqzgg.supabase.co';
+const SUPA_KEY = 'sb_publishable_FNp43a0gFnQshCUAZVDz1g_ZO48cnrW';
+const supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+let authUser = null;
+
+async function initAuth() {
+  const { data: { session } } = await supa.auth.getSession();
+  authUser = session?.user ?? null;
+  updateAuthUI();
+  supa.auth.onAuthStateChange((_e, session) => {
+    authUser = session?.user ?? null;
+    updateAuthUI();
+  });
+}
+
+function updateAuthUI() {
+  const dot = document.getElementById('auth-dot');
+  if (authUser) {
+    dot.classList.remove('hidden');
+    document.getElementById('auth-logged-out').classList.add('hidden');
+    document.getElementById('auth-logged-in').classList.remove('hidden');
+    document.getElementById('auth-user-email').textContent = authUser.email;
+    const ls = localStorage.getItem('hl_last_sync');
+    document.getElementById('auth-last-sync').textContent =
+      ls ? new Date(ls).toLocaleString('de') : 'Noch nie';
+  } else {
+    dot.classList.add('hidden');
+    document.getElementById('auth-logged-out').classList.remove('hidden');
+    document.getElementById('auth-logged-in').classList.add('hidden');
+  }
+}
+
+async function loginUser() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pass  = document.getElementById('auth-pass').value;
+  const errEl = document.getElementById('auth-error');
+  const btn   = document.getElementById('auth-login-btn');
+  errEl.textContent = ''; btn.disabled = true;
+  const { error } = await supa.auth.signInWithPassword({ email, password: pass });
+  btn.disabled = false;
+  if (error) { errEl.textContent = error.message; }
+  else { closeModal('modal-auth'); }
+}
+
+async function signupUser() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pass  = document.getElementById('auth-pass').value;
+  const errEl = document.getElementById('auth-error');
+  errEl.style.color = '';
+  const { error } = await supa.auth.signUp({ email, password: pass });
+  if (error) { errEl.textContent = error.message; }
+  else {
+    errEl.style.color = '#34d399';
+    errEl.textContent = '✓ Bestätigungs-E-Mail gesendet – bitte prüfen!';
+  }
+}
+
+async function logoutUser() {
+  await supa.auth.signOut();
+}
+
+async function syncData() {
+  if (!authUser) { openModal('modal-auth'); return; }
+  const btn    = document.getElementById('auth-sync-btn');
+  const status = document.getElementById('auth-sync-status');
+  btn.disabled = true; btn.textContent = 'Synchronisiert…'; status.textContent = '';
+  try {
+    const localTs = localStorage.getItem('hl_updated_at') || '0';
+    const { data: remote, error: fetchErr } = await supa
+      .from('user_data').select('*').eq('id', authUser.id).maybeSingle();
+    if (fetchErr) throw fetchErr;
+
+    const remoteTs   = remote?.updated_at || '0';
+    const localNewer = localTs >= remoteTs;
+
+    if (localNewer) {
+      const now = new Date().toISOString();
+      const { error: upsertErr } = await supa.from('user_data').upsert({
+        id: authUser.id,
+        islands:    DB.islands(),
+        settings:   DB.settings(),
+        history:    DB.history(),
+        updated_at: now
+      });
+      if (upsertErr) throw upsertErr;
+      localStorage.setItem('hl_updated_at', now);
+      localStorage.setItem('hl_last_sync',  now);
+      status.textContent = '↑ Daten hochgeladen';
+    } else {
+      DB.setIslands(remote.islands   || []);
+      DB.setSettings(remote.settings || { newPerDay: 20 });
+      DB.setHistory(remote.history   || {});
+      const now = new Date().toISOString();
+      localStorage.setItem('hl_updated_at', remote.updated_at);
+      localStorage.setItem('hl_last_sync',  now);
+      status.textContent = '↓ Daten heruntergeladen';
+      renderDashboard();
+    }
+    document.getElementById('auth-last-sync').textContent =
+      new Date().toLocaleString('de');
+  } catch(err) {
+    status.style.color = '#f87171';
+    status.textContent = 'Fehler: ' + err.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Jetzt synchronisieren';
+  }
+}
+
+// ── SM-2 algorithm ────────────────────────────────────────────
+const SRS0 = { state:'new', interval:0, easeFactor:2.5, repetitions:0, due:0, lapses:0 };
+
+function sm2(raw, rating) {
+  // rating: 0=Again 1=Hard 2=Good 3=Easy
+  const s   = { ...SRS0, ...raw };
+  const now = Date.now();
+
+  if (s.state === 'new' || s.state === 'learning') {
+    if      (rating === 0) { s.state='learning'; s.due=now+60000;  s.repetitions=0; }
+    else if (rating === 1) { s.state='learning'; s.due=now+600000; }
+    else if (rating === 2) { s.state='review'; s.interval=1; s.repetitions=1; s.due=addDays(now,1); }
+    else                   {
+      s.state='review'; s.interval=4; s.repetitions=1;
+      s.easeFactor=Math.min(s.easeFactor+0.15, 4.0);
+      s.due=addDays(now,4);
+    }
+  } else {
+    // review state
+    const iv = Math.max(1, s.interval);
+    if (rating === 0) {
+      s.state='learning'; s.due=now+60000;
+      s.lapses=(s.lapses||0)+1;
+      s.easeFactor=Math.max(1.3, s.easeFactor-0.2);
+      s.interval=Math.max(1, Math.round(iv*0.5));
+      s.repetitions=0;
+    } else if (rating === 1) {
+      s.interval=Math.max(1, Math.round(iv*1.2));
+      s.easeFactor=Math.max(1.3, s.easeFactor-0.15);
+      s.due=addDays(now, s.interval);
+    } else if (rating === 2) {
+      s.interval=Math.max(1, Math.round(iv*s.easeFactor));
+      s.due=addDays(now, s.interval);
+      s.repetitions++;
+    } else {
+      s.interval=Math.max(1, Math.round(iv*s.easeFactor*1.3));
+      s.easeFactor=Math.min(4.0, s.easeFactor+0.15);
+      s.due=addDays(now, s.interval);
+      s.repetitions++;
+    }
+  }
+  s.lastReviewed = now;
+  return s;
+}
+
+function fmtInterval(srs, rating) {
+  const next = sm2(srs, rating);
+  if (next.state === 'learning') {
+    const mins = Math.round((next.due - Date.now()) / 60000);
+    return mins <= 1 ? '< 1 Min' : mins + ' Min';
+  }
+  const d = next.interval;
+  if (d === 1)  return '1 Tag';
+  if (d < 31)   return d + ' Tage';
+  const m = Math.round(d/30);
+  return m + ' Mon.';
+}
+
+// ── SRS stats ─────────────────────────────────────────────────
+function getSRSStats(filterIslandId) {
+  const islands = DB.islands();
+  const now     = Date.now();
+  const eod     = new Date(); eod.setHours(23,59,59,999);
+  const eodMs   = eod.getTime();
+  let due=0, newC=0, learning=0;
+
+  islands.forEach(island => {
+    if (filterIslandId && filterIslandId !== 'all' && island.id !== filterIslandId) return;
+    (island.sentences||[]).forEach(s => {
+      const st = s.srs?.state || 'new';
+      if      (st === 'new')      newC++;
+      else if (st === 'learning' && (s.srs?.due||0) <= now) learning++;
+      else if (st === 'review'   && (s.srs?.due||0) <= eodMs) due++;
+    });
+  });
+  return { due, newC, learning };
+}
+
+// ── navigation ────────────────────────────────────────────────
+let currentView = 'dashboard';
+
+function nav(view) {
+  ['dashboard','islands','shadowing','recall'].forEach(v => {
+    const el = document.getElementById('view-'+v);
+    el.classList.add('hidden'); el.classList.remove('fade-up');
+  });
+  const el = document.getElementById('view-'+view);
+  el.classList.remove('hidden');
+  void el.offsetWidth;
+  el.classList.add('fade-up');
+  document.querySelectorAll('.nav-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.view === view));
+  currentView = view;
+  if (view === 'dashboard')  renderDashboard();
+  if (view === 'islands')    renderIslands();
+  if (view === 'shadowing')  initShadowSel();
+  if (view === 'recall')     initSRSSetup();
+}
+
+// ── dashboard ─────────────────────────────────────────────────
+function renderDashboard() {
+  const stats   = getSRSStats();
+  const islands = DB.islands();
+  const total   = stats.due + stats.learning;
+
+  document.getElementById('dash-due').textContent    = total;
+  document.getElementById('dash-new').textContent    = stats.newC;
+
+  // streak
+  const hist = DB.history();
+  let streak=0; const d=new Date();
+  while(true) {
+    const ds=d.toISOString().slice(0,10);
+    if((hist[ds]?.reviewed||0)>0){ streak++; d.setDate(d.getDate()-1); } else break;
+  }
+  document.getElementById('dash-streak').textContent = streak;
+
+  // CTA
+  const hasWork = total > 0 || stats.newC > 0;
+  document.getElementById('dash-review-cta').classList.toggle('hidden', !hasWork);
+  document.getElementById('dash-all-done').classList.toggle('hidden',  hasWork);
+
+  document.getElementById('dash-island-count').textContent =
+    islands.length + ' Island' + (islands.length!==1?'s':'') + ' · ' +
+    islands.reduce((a,i)=>a+(i.sentences||[]).length,0) + ' Sätze';
+
+  const todayHist = hist[tdStr()] || {};
+  document.getElementById('dash-review-count').textContent =
+    (todayHist.reviewed||0) + ' Reviews heute';
+
+  // recent islands
+  const cont = document.getElementById('dash-recent');
+  if (!islands.length) {
+    cont.innerHTML = '<div class="col-span-2 sm:col-span-4 text-center py-8 text-gray-600 text-sm">' +
+      'Noch keine Islands. <button onclick="nav(\'islands\')" class="text-indigo-400 hover:underline">Jetzt erstellen →</button></div>';
+    return;
+  }
+  cont.innerHTML = [...islands].reverse().slice(0,4).map(island => `
+    <div onclick="navToIsland('${island.id}')"
+         class="island-card cursor-pointer rounded-xl border border-gray-800 p-4 transition-all"
+         style="background:#111117">
+      <div class="text-xl mb-1">${islandEmoji(island.name)}</div>
+      <div class="font-medium text-sm truncate">${esc(island.name)}</div>
+      <div class="text-xs text-gray-600 mt-0.5">${esc(island.language||'–')}</div>
+      <div class="text-xs text-gray-700 mt-1.5">${(island.sentences||[]).length} Sätze</div>
+    </div>`).join('');
+}
+
+function islandEmoji(n='') {
+  n=n.toLowerCase();
+  if(/essen|food|restaurant/.test(n)) return '🍽️';
+  if(/reise|travel|urlaub/.test(n))   return '✈️';
+  if(/arbeit|work|job/.test(n))       return '💼';
+  if(/begrüß|greeting|hola/.test(n))  return '👋';
+  if(/familie|family/.test(n))        return '👨‍👩‍👧';
+  if(/sport|fitness/.test(n))         return '💪';
+  if(/musik|music/.test(n))           return '🎵';
+  if(/film|movie|kino/.test(n))       return '🎬';
+  if(/wetter|weather/.test(n))        return '🌤️';
+  if(/einkauf|shopping/.test(n))      return '🛍️';
+  return '🏝️';
+}
+
+function navToIsland(id) { nav('islands'); setTimeout(()=>showDetail(id),80); }
+
+// ── islands ───────────────────────────────────────────────────
+let activeIslandId = null;
+
+function renderIslands() {
+  closeDetail();
+  const islands = DB.islands();
+  const grid = document.getElementById('islands-grid');
+  if (!islands.length) {
+    grid.innerHTML = '<div class="col-span-2 text-center py-16 text-gray-600">' +
+      '<div class="text-4xl mb-3">🏝️</div>' +
+      '<p class="text-sm mb-1">Noch keine Language Islands</p>' +
+      '<p class="text-xs">Erstelle deine erste thematische Sammlung</p></div>';
+    return;
+  }
+  const now   = Date.now();
+  const eodMs = (() => { const d=new Date(); d.setHours(23,59,59,999); return d.getTime(); })();
+
+  grid.innerHTML = islands.map(island => {
+    const sents = island.sentences||[];
+    const due   = sents.filter(s=>{
+      const st=s.srs?.state||'new';
+      return (st==='review'&&(s.srs?.due||0)<=eodMs)||(st==='learning'&&(s.srs?.due||0)<=now);
+    }).length;
+    return `
+    <div onclick="showDetail('${island.id}')"
+         class="island-card cursor-pointer rounded-xl border border-gray-800 p-5 transition-all"
+         style="background:#111117">
+      <div class="flex items-start justify-between mb-3">
+        <span class="text-3xl">${islandEmoji(island.name)}</span>
+        <div class="flex gap-1.5">
+          ${due>0?`<span class="text-xs rounded-full px-2 py-0.5 bg-indigo-500/15 text-indigo-400">${due} fällig</span>`:''}
+          <span class="text-xs rounded-full px-2 py-0.5 text-gray-600" style="background:#1a1a24">${sents.length} Sätze</span>
+        </div>
+      </div>
+      <h3 class="font-semibold text-sm mb-0.5">${esc(island.name)}</h3>
+      <p class="text-xs text-gray-500">${esc(island.language||'–')} · ${esc(island.ttsLang||'–')}</p>
+      ${sents[0]?`<p class="text-xs text-gray-700 mt-2 truncate italic">"${esc(sents[0].target)}"</p>`:''}
+    </div>`;
+  }).join('');
+}
+
+function showDetail(id) {
+  const island = DB.islands().find(i=>i.id===id);
+  if (!island) return;
+  activeIslandId = id;
+  document.getElementById('islands-grid').classList.add('hidden');
+  document.getElementById('island-detail').classList.remove('hidden');
+  document.getElementById('detail-name').textContent = island.name;
+  document.getElementById('detail-meta').textContent =
+    (island.language||'–') + ' · TTS: ' + (island.ttsLang||'–');
+  renderSentences(island);
+}
+
+function closeDetail() {
+  activeIslandId = null;
+  document.getElementById('islands-grid').classList.remove('hidden');
+  document.getElementById('island-detail').classList.add('hidden');
+}
+
+function renderSentences(island) {
+  const list = document.getElementById('sentences-list');
+  if (!(island.sentences||[]).length) {
+    list.innerHTML = '<div class="text-center py-12 text-gray-600 text-sm">Noch keine Sätze – füge den ersten hinzu!</div>';
+    return;
+  }
+  const now   = Date.now();
+  const eodMs = (() => { const d=new Date(); d.setHours(23,59,59,999); return d.getTime(); })();
+
+  list.innerHTML = island.sentences.map((s,i) => {
+    const srs = s.srs || SRS0;
+    let badge='';
+    if      (srs.state==='new')                                badge='<span class="text-xs px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">Neu</span>';
+    else if (srs.state==='learning'&&(srs.due||0)<=now)        badge='<span class="text-xs px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400">Lernen</span>';
+    else if (srs.state==='review'  &&(srs.due||0)<=eodMs)      badge='<span class="text-xs px-1.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-400">Fällig</span>';
+    else if (srs.state==='review') {
+      const d=new Date(srs.due); badge=`<span class="text-xs text-gray-700">${d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})}</span>`;
+    }
+    return `
+    <div class="sentence-row px-5 py-4 group flex items-start gap-3">
+      <span class="text-xs text-gray-700 font-mono mt-0.5 flex-shrink-0 w-5 text-right">${i+1}</span>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 mb-0.5 flex-wrap">
+          <p class="text-gray-200 font-medium text-sm leading-snug">${esc(s.target)}</p>
+          ${badge}
+        </div>
+        <p class="text-xs text-gray-500">${esc(s.native||'')}</p>
+        ${s.notes?`<p class="text-xs text-gray-700 mt-0.5 italic">${esc(s.notes)}</p>`:''}
+      </div>
+      <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+        <button onclick="ttsPlay('${island.id}','${s.id}')"
+                class="p-1.5 text-gray-600 hover:text-indigo-400 transition-colors" title="Anhören">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15.536 8.464a5 5 0 010 7.072M12 6v12M8.464 9.536a5 5 0 000 4.928"/>
+          </svg>
+        </button>
+        <button onclick="deleteSentence('${island.id}','${s.id}')"
+                class="p-1.5 text-gray-600 hover:text-rose-400 transition-colors" title="Löschen">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddIsland() { openModal('modal-island'); setTimeout(()=>document.getElementById('in-island-name').focus(),60); }
+function saveIsland() {
+  const name = document.getElementById('in-island-name').value.trim();
+  const lang = document.getElementById('in-island-lang').value.trim();
+  const tts  = document.getElementById('in-island-tts').value;
+  if (!name) { document.getElementById('in-island-name').focus(); return; }
+  const islands = DB.islands();
+  islands.push({ id:uid(), name, language:lang||'?', ttsLang:tts, sentences:[], createdAt:Date.now() });
+  DB.setIslands(islands);
+  closeModal('modal-island');
+  renderIslands();
+}
+
+function openAddSentence() {
+  document.getElementById('in-sent-target').value = '';
+  document.getElementById('in-sent-native').value = '';
+  document.getElementById('in-sent-notes').value  = '';
+  openModal('modal-sentence');
+  setTimeout(()=>document.getElementById('in-sent-target').focus(),60);
+}
+function saveSentence() {
+  const target = document.getElementById('in-sent-target').value.trim();
+  const native = document.getElementById('in-sent-native').value.trim();
+  const notes  = document.getElementById('in-sent-notes').value.trim();
+  if (!target) { document.getElementById('in-sent-target').focus(); return; }
+  const islands = DB.islands();
+  const island  = islands.find(i=>i.id===activeIslandId);
+  if (!island) return;
+  if (!island.sentences) island.sentences=[];
+  island.sentences.push({ id:uid(), target, native, notes, addedAt:Date.now(), srs:{...SRS0} });
+  DB.setIslands(islands);
+  closeModal('modal-sentence');
+  renderSentences(island);
+}
+
+function deleteSentence(islandId, sentId) {
+  const islands = DB.islands();
+  const island  = islands.find(i=>i.id===islandId);
+  if (!island) return;
+  island.sentences = (island.sentences||[]).filter(s=>s.id!==sentId);
+  DB.setIslands(islands);
+  renderSentences(island);
+}
+
+function deleteIsland() {
+  if (!activeIslandId) return;
+  if (!confirm('Island und alle Sätze wirklich löschen?')) return;
+  DB.setIslands(DB.islands().filter(i=>i.id!==activeIslandId));
+  closeDetail(); renderIslands();
+}
+
+// ── TTS / voices ──────────────────────────────────────────────
+let allVoices = [];
+
+function loadVoices() {
+  allVoices = window.speechSynthesis.getVoices();
+  if (shadow.islandId && allVoices.length) populateVoiceSel();
+  const srsIslandSel = document.getElementById('srs-island-sel');
+  if (srsIslandSel && srsIslandSel.value && srsIslandSel.value !== 'all' && allVoices.length) populateSRSVoiceSel();
+}
+
+function getPreferredVoice(lang) {
+  if (!allVoices.length) return null;
+  const saved = localStorage.getItem('hl_voice_'+lang);
+  if (saved) { const v=allVoices.find(v=>v.name===saved); if(v) return v; }
+  const prefix = lang.split('-')[0];
+  const pool   = (allVoices.filter(v=>v.lang===lang).length
+    ? allVoices.filter(v=>v.lang===lang)
+    : allVoices.filter(v=>v.lang.toLowerCase().startsWith(prefix)));
+  if (!pool.length) return null;
+  return pool.find(v=>/enhanced|premium/i.test(v.name))
+      || pool.find(v=>!/compact/i.test(v.name))
+      || pool[0];
+}
+
+function ttsPlay(islandId, sentId) {
+  const island = DB.islands().find(i=>i.id===islandId);
+  const sent   = (island?.sentences||[]).find(s=>s.id===sentId);
+  if (!sent) return;
+  speakText(sent.target, island.ttsLang||'es-ES', 1);
+}
+
+function speakText(text, lang, rate=1, voiceName=null) {
+  if (!('speechSynthesis' in window)) { alert('TTS nicht verfügbar.'); return; }
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang=lang; u.rate=rate;
+  const v = voiceName ? allVoices.find(v=>v.name===voiceName) : getPreferredVoice(lang);
+  if (v) u.voice=v;
+  return window.speechSynthesis.speak(u), u;
+}
+
+// ── shadowing ─────────────────────────────────────────────────
+let shadow = { islandId:null, sentences:[], idx:0 };
+let ttsPlaying=false;
+
+function initShadowSel() {
+  const sel = document.getElementById('shadow-island-sel');
+  const islands = DB.islands();
+  sel.innerHTML = '<option value="">– wählen –</option>' +
+    islands.map(i=>`<option value="${i.id}">${esc(i.name)} (${(i.sentences||[]).length})</option>`).join('');
+  if (shadow.islandId) { sel.value=shadow.islandId; loadShadowIsland(); }
+  else document.getElementById('voice-row').classList.add('hidden');
+}
+
+function loadShadowIsland() {
+  const id = document.getElementById('shadow-island-sel').value;
+  if (!id) {
+    document.getElementById('shadow-empty').classList.remove('hidden');
+    document.getElementById('shadow-player').classList.add('hidden');
+    document.getElementById('voice-row').classList.add('hidden');
+    return;
+  }
+  const island = DB.islands().find(i=>i.id===id);
+  if (!island || !(island.sentences||[]).length) {
+    document.getElementById('shadow-empty').innerHTML =
+      '<div class="text-4xl mb-3">📭</div><p class="text-sm">Keine Sätze in dieser Island.</p>';
+    document.getElementById('shadow-empty').classList.remove('hidden');
+    document.getElementById('shadow-player').classList.add('hidden');
+    return;
+  }
+  shadow.islandId=id; shadow.sentences=island.sentences; shadow.idx=0;
+  document.getElementById('shadow-empty').classList.add('hidden');
+  document.getElementById('shadow-player').classList.remove('hidden');
+  populateVoiceSel();
+  renderShadowCard();
+}
+
+function populateVoiceSel() {
+  const island = DB.islands().find(i=>i.id===shadow.islandId);
+  if (!island) return;
+  const ttsLang = island.ttsLang||'es-ES';
+  const prefix  = ttsLang.split('-')[0];
+  const showAll = document.getElementById('voice-show-all').checked;
+
+  let voices = showAll ? allVoices : (() => {
+    const ex = allVoices.filter(v=>v.lang===ttsLang);
+    if (ex.length) return ex;
+    const bp = allVoices.filter(v=>v.lang.toLowerCase().startsWith(prefix));
+    return bp.length ? bp : allVoices;
+  })();
+
+  const saved = localStorage.getItem('hl_voice_'+ttsLang);
+  const auto  = getPreferredVoice(ttsLang);
+  const sel   = document.getElementById('voice-sel');
+  sel.innerHTML = `<option value="">Standard (${auto?auto.name:'automatisch'})</option>` +
+    voices.map(v=>{
+      const badge=/enhanced|premium/i.test(v.name)?' ⭐':/compact/i.test(v.name)?' ·':'';
+      return `<option value="${esc(v.name)}" ${saved===v.name?'selected':''}>${esc(v.name)}${badge} [${v.lang}]</option>`;
+    }).join('');
+  document.getElementById('voice-hint').textContent = voices.length
+    ? `${voices.length} Stimme${voices.length!==1?'n':''} · ⭐ = Enhanced/Premium`
+    : 'Keine passenden Stimmen – "Alle anzeigen" aktivieren';
+  document.getElementById('voice-row').classList.remove('hidden');
+}
+
+function saveVoicePref() {
+  const island = DB.islands().find(i=>i.id===shadow.islandId);
+  if (!island) return;
+  const val=document.getElementById('voice-sel').value;
+  if(val) localStorage.setItem('hl_voice_'+island.ttsLang,val);
+  else    localStorage.removeItem('hl_voice_'+island.ttsLang);
+}
+
+function populateSRSVoiceSel() {
+  const islandId = document.getElementById('srs-island-sel')?.value;
+  if (!islandId || islandId === 'all') {
+    document.getElementById('srs-voice-row').classList.add('hidden');
+    return;
+  }
+  const island = DB.islands().find(i=>i.id===islandId);
+  if (!island) { document.getElementById('srs-voice-row').classList.add('hidden'); return; }
+  const ttsLang = island.ttsLang || 'es-ES';
+  const prefix  = ttsLang.split('-')[0];
+  const showAll = document.getElementById('srs-voice-show-all').checked;
+
+  let voices = showAll ? allVoices : (() => {
+    const ex = allVoices.filter(v=>v.lang===ttsLang);
+    if (ex.length) return ex;
+    const bp = allVoices.filter(v=>v.lang.toLowerCase().startsWith(prefix));
+    return bp.length ? bp : allVoices;
+  })();
+
+  const saved = localStorage.getItem('hl_voice_'+ttsLang);
+  const auto  = getPreferredVoice(ttsLang);
+  const sel   = document.getElementById('srs-voice-sel');
+  sel.innerHTML = `<option value="">Standard (${auto?auto.name:'automatisch'})</option>` +
+    voices.map(v=>{
+      const badge=/enhanced|premium/i.test(v.name)?' ⭐':/compact/i.test(v.name)?' ·':'';
+      return `<option value="${esc(v.name)}" ${saved===v.name?'selected':''}>${esc(v.name)}${badge} [${v.lang}]</option>`;
+    }).join('');
+  document.getElementById('srs-voice-hint').textContent = voices.length
+    ? `${voices.length} Stimme${voices.length!==1?'n':''} · ⭐ = Enhanced/Premium`
+    : 'Keine passenden Stimmen – "Alle anzeigen" aktivieren';
+  document.getElementById('srs-voice-row').classList.remove('hidden');
+}
+
+function saveSRSVoicePref() {
+  const islandId = document.getElementById('srs-island-sel')?.value;
+  if (!islandId || islandId === 'all') return;
+  const island = DB.islands().find(i=>i.id===islandId);
+  if (!island) return;
+  const val = document.getElementById('srs-voice-sel').value;
+  if (val) localStorage.setItem('hl_voice_'+island.ttsLang, val);
+  else     localStorage.removeItem('hl_voice_'+island.ttsLang);
+}
+
+function renderShadowCard() {
+  const s=shadow.sentences[shadow.idx];
+  document.getElementById('shadow-sentence').textContent    = s.target;
+  document.getElementById('shadow-translation').textContent = s.native||'';
+  document.getElementById('shadow-prog').textContent        = `${shadow.idx+1} / ${shadow.sentences.length}`;
+  document.getElementById('pron-result').classList.add('hidden');
+  stopTTS();
+}
+
+function shadowNext() { if(shadow.idx<shadow.sentences.length-1){shadow.idx++;renderShadowCard();} }
+function shadowPrev() { if(shadow.idx>0){shadow.idx--;renderShadowCard();} }
+
+function stopTTS() {
+  window.speechSynthesis&&window.speechSynthesis.cancel();
+  ttsPlaying=false;
+  document.getElementById('icon-play').classList.remove('hidden');
+  document.getElementById('icon-stop').classList.add('hidden');
+  document.getElementById('waveform').classList.add('hidden');
+  document.getElementById('waveform-placeholder').classList.remove('hidden');
+}
+
+function playShadowTTS() {
+  if (ttsPlaying) { stopTTS(); return; }
+  const island=DB.islands().find(i=>i.id===shadow.islandId);
+  if (!island) return;
+  const s    = shadow.sentences[shadow.idx];
+  const rate = parseFloat(document.getElementById('tts-rate').value)||1;
+  const lang = island.ttsLang||'es-ES';
+  const u    = new SpeechSynthesisUtterance(s.target);
+  u.lang=lang; u.rate=rate;
+  const selName = document.getElementById('voice-sel').value;
+  const voice   = selName?allVoices.find(v=>v.name===selName):getPreferredVoice(lang);
+  if (voice) u.voice=voice;
+  u.onstart=()=>{
+    ttsPlaying=true;
+    document.getElementById('icon-play').classList.add('hidden');
+    document.getElementById('icon-stop').classList.remove('hidden');
+    document.getElementById('waveform').classList.remove('hidden');
+    document.getElementById('waveform-placeholder').classList.add('hidden');
+  };
+  u.onend=u.onerror=stopTTS;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(u);
+}
+
+// pronunciation check
+let recActive=false, recObj=null;
+
+function toggleRec() {
+  if (!('webkitSpeechRecognition' in window||'SpeechRecognition' in window)) {
+    alert('Spracherkennung nicht verfügbar. Bitte Safari oder Chrome verwenden.'); return;
+  }
+  if (recActive) { recObj&&recObj.stop(); return; }
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  recObj=new SR();
+  const island=DB.islands().find(i=>i.id===shadow.islandId);
+  recObj.lang=island?.ttsLang||'es-ES';
+  recObj.interimResults=false; recObj.maxAlternatives=3;
+  recObj.onstart=()=>{
+    recActive=true;
+    document.getElementById('rec-dot').classList.add('animate-pulse');
+    document.getElementById('rec-label').textContent='Aufnahme läuft…';
+    document.getElementById('btn-record').style.borderColor='#f87171';
+  };
+  recObj.onend=()=>{
+    recActive=false;
+    document.getElementById('rec-dot').classList.remove('animate-pulse');
+    document.getElementById('rec-label').textContent='Aufnehmen';
+    document.getElementById('btn-record').style.borderColor='';
+  };
+  recObj.onresult=e=>{
+    const got=e.results[0][0].transcript.toLowerCase().trim();
+    const tgt=shadow.sentences[shadow.idx].target.toLowerCase().trim();
+    showPronResult(got, similarity(got,tgt));
+  };
+  recObj.onerror=e=>{
+    if(e.error==='not-allowed') alert('Mikrofon-Zugriff verweigert.');
+  };
+  recObj.start();
+}
+
+function similarity(a,b){
+  const norm=s=>s.toLowerCase().replace(/[^\w\s]/g,'').trim();
+  const s1=norm(a),s2=norm(b);
+  if(s1===s2)return 100; if(!s1||!s2)return 0;
+  const w1=s1.split(/\s+/),w2=s2.split(/\s+/);
+  let hit=0; w2.forEach(w=>{if(w1.includes(w))hit++;});
+  const wS=hit/Math.max(w1.length,w2.length)*100;
+  const cS=(1-lev(s1,s2)/Math.max(s1.length,s2.length))*100;
+  return Math.round(wS*.6+cS*.4);
+}
+function lev(a,b){
+  const m=a.length,n=b.length;
+  const dp=Array.from({length:m+1},(_,i)=>Array.from({length:n+1},(_,j)=>i?j?0:i:j));
+  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)
+    dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j-1],dp[i-1][j],dp[i][j-1]);
+  return dp[m][n];
+}
+function showPronResult(text,score){
+  let label,barCls;
+  if(score>=80){label=`${score}% – Ausgezeichnet! 🎉`;barCls='bg-emerald-400';}
+  else if(score>=60){label=`${score}% – Gut! 👍`;barCls='bg-indigo-400';}
+  else if(score>=40){label=`${score}% – Üb weiter 💪`;barCls='bg-amber-400';}
+  else{label=`${score}% – Nochmal`;barCls='bg-rose-400';}
+  document.getElementById('pron-result').classList.remove('hidden');
+  document.getElementById('pron-text').textContent='"'+text+'"';
+  const sc=document.getElementById('pron-score');
+  sc.textContent=label;
+  sc.className='text-sm font-bold '+(score>=80?'text-emerald-400':score>=60?'text-indigo-400':score>=40?'text-amber-400':'text-rose-400');
+  const bar=document.getElementById('pron-bar');
+  bar.className='h-full rounded-full transition-all duration-700 '+barCls;
+  bar.style.width='0%';
+  setTimeout(()=>bar.style.width=score+'%',50);
+}
+
+// ── SRS Review Session ────────────────────────────────────────
+let srsQ = {
+  queue:[], again:[], current:null, flipped:false,
+  total:0, done:0,
+  counts:{again:0,hard:0,good:0,easy:0}
+};
+
+function initSRSSetup() {
+  const islands = DB.islands();
+  const sel = document.getElementById('srs-island-sel');
+  sel.innerHTML='<option value="all">Alle Islands</option>'+
+    islands.map(i=>`<option value="${i.id}">${esc(i.name)}</option>`).join('');
+
+  refreshSRSCounts();
+  populateSRSVoiceSel();
+
+  document.getElementById('srs-setup').classList.remove('hidden');
+  document.getElementById('srs-session').classList.add('hidden');
+  document.getElementById('srs-complete').classList.add('hidden');
+}
+
+function refreshSRSCounts() {
+  const islandId = document.getElementById('srs-island-sel')?.value || 'all';
+  const stats = getSRSStats(islandId);
+  document.getElementById('srs-due-count').textContent  = stats.due + stats.learning;
+  document.getElementById('srs-new-count').textContent  = stats.newC;
+  document.getElementById('srs-learn-count').textContent= stats.learning;
+
+  const total = stats.due + stats.learning + stats.newC;
+  document.getElementById('srs-no-cards').classList.toggle('hidden', total > 0);
+  document.getElementById('srs-start-btn').disabled = total === 0;
+  document.getElementById('srs-start-btn').className = total > 0
+    ? 'w-full py-3 rounded-xl font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors'
+    : 'w-full py-3 rounded-xl font-semibold bg-gray-800 text-gray-600 cursor-not-allowed';
+}
+
+document.addEventListener('change', e => {
+  if (e.target.id === 'srs-island-sel') { refreshSRSCounts(); populateSRSVoiceSel(); }
+});
+
+function startSRS() {
+  const islands   = DB.islands();
+  const islandId  = document.getElementById('srs-island-sel').value;
+  const dir       = document.getElementById('srs-dir').value;
+  const settings  = DB.settings();
+  const maxNew    = settings.newPerDay || 20;
+  const now       = Date.now();
+  const eodMs     = (() => { const d=new Date(); d.setHours(23,59,59,999); return d.getTime(); })();
+
+  // Collect sentences with their island context
+  let reviewCards=[], learningCards=[], newCards=[];
+  islands.forEach(island => {
+    if (islandId !== 'all' && island.id !== islandId) return;
+    (island.sentences||[]).forEach(s => {
+      const st=s.srs?.state||'new';
+      const entry={ islandId:island.id, ttsLang:island.ttsLang, sentId:s.id };
+      if      (st==='review'   && (s.srs?.due||0)<=eodMs) reviewCards.push(entry);
+      else if (st==='learning' && (s.srs?.due||0)<=now)   learningCards.push(entry);
+      else if (st==='new')                                 newCards.push(entry);
+    });
+  });
+
+  // Shuffle each group
+  const shuf=a=>a.sort(()=>Math.random()-.5);
+  shuf(reviewCards); shuf(learningCards); shuf(newCards);
+  newCards=newCards.slice(0, maxNew);
+
+  // Determine direction per card
+  const resolveDir=()=> dir==='random'?(Math.random()>.5?'target':'native'):dir;
+  const mkCard=(entry)=>({ ...entry, dir:resolveDir() });
+
+  const queue=[...reviewCards,...learningCards,...newCards].map(mkCard);
+  if (!queue.length) { alert('Keine fälligen Karten.'); return; }
+
+  srsQ = { queue, again:[], current:null, flipped:false,
+            total:queue.length, done:0,
+            counts:{again:0,hard:0,good:0,easy:0} };
+
+  document.getElementById('srs-setup').classList.add('hidden');
+  document.getElementById('srs-session').classList.remove('hidden');
+  document.getElementById('srs-complete').classList.add('hidden');
+
+  loadNextSRSCard();
+}
+
+function loadNextSRSCard() {
+  // Try main queue first; then again-cards whose due time has passed
+  let entry = null;
+  if (srsQ.queue.length) {
+    entry = srsQ.queue.shift();
+  } else if (srsQ.again.length) {
+    entry = srsQ.again.shift();
+  } else {
+    finishSRS(); return;
+  }
+
+  // Fetch fresh sentence data
+  const islands = DB.islands();
+  const island  = islands.find(i=>i.id===entry.islandId);
+  const sent    = (island?.sentences||[]).find(s=>s.id===entry.sentId);
+  if (!sent || !island) { loadNextSRSCard(); return; }
+
+  srsQ.current = { entry, island, sent };
+  srsQ.flipped = false;
+
+  // Stop any running TTS / recognition from previous card
+  window.speechSynthesis && window.speechSynthesis.cancel();
+  if (srsRecActive && srsRecObj) srsRecObj.stop();
+
+  // Reset flip
+  document.getElementById('srs-flip').classList.remove('flipped');
+
+  // Reset speech UI
+  document.getElementById('srs-speech-idle').classList.remove('hidden');
+  document.getElementById('srs-speech-result').classList.add('hidden');
+  document.getElementById('srs-mic-label').textContent = 'Jetzt sprechen';
+  document.getElementById('srs-mic-btn').classList.remove('animate-pulse');
+
+  // Reset reveal button → disabled
+  const revealBtn = document.getElementById('srs-reveal-btn');
+  revealBtn.disabled  = true;
+  revealBtn.className = 'w-full py-2.5 rounded-xl text-sm font-medium ' +
+                        'bg-gray-800 text-gray-600 cursor-not-allowed transition-colors';
+
+  // Reset back face: hide rating buttons, hide TTS indicator
+  document.getElementById('srs-rating-btns').classList.add('hidden');
+  document.getElementById('srs-tts-indicator').classList.add('hidden');
+
+  // Populate front
+  const srs = sent.srs || SRS0;
+  const front = entry.dir==='target' ? sent.target : (sent.native||sent.target);
+  const back  = entry.dir==='target' ? (sent.native||'–') : sent.target;
+  const hint  = entry.dir==='target' ? 'Was bedeutet das?' : 'Wie heißt das?';
+
+  document.getElementById('srs-front-hint').textContent = hint;
+  document.getElementById('srs-front-text').textContent = front;
+  document.getElementById('srs-back-text').textContent  = back;
+
+  // Card type badge
+  const stLabel = (srs.state==='new')?'Neu':(srs.state==='learning')?'Lernen':'Wiederholung';
+  document.getElementById('srs-card-type').textContent   = stLabel;
+  document.getElementById('srs-card-island').textContent = island.name;
+
+  // Interval previews on buttons
+  document.getElementById('lbl-again').textContent = fmtInterval(srs, 0);
+  document.getElementById('lbl-hard').textContent  = fmtInterval(srs, 1);
+  document.getElementById('lbl-good').textContent  = fmtInterval(srs, 2);
+  document.getElementById('lbl-easy').textContent  = fmtInterval(srs, 3);
+
+  // Progress
+  const totalCards = srsQ.total + srsQ.again.length;
+  const prog = srsQ.done / Math.max(1, srsQ.total);
+  document.getElementById('srs-bar').style.width = Math.round(prog*100)+'%';
+  document.getElementById('srs-prog-label').textContent =
+    srsQ.done + '/' + (srsQ.total + srsQ.again.length);
+}
+
+// ── SRS speech recognition ───────────────────────────────────
+let srsRecActive = false, srsRecObj = null;
+
+function startSRSSpeech() {
+  if (srsRecActive) { srsRecObj && srsRecObj.stop(); return; }
+
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    skipSRSSpeech(); return;
+  }
+
+  const { island, sent } = srsQ.current;
+  const SR  = window.SpeechRecognition || window.webkitSpeechRecognition;
+  srsRecObj = new SR();
+  srsRecObj.lang             = island.ttsLang || 'es-ES';
+  srsRecObj.interimResults   = false;
+  srsRecObj.maxAlternatives  = 3;
+
+  srsRecObj.onstart = () => {
+    srsRecActive = true;
+    document.getElementById('srs-mic-label').textContent = 'Aufnahme läuft…';
+    document.getElementById('srs-mic-btn').classList.add('animate-pulse');
+  };
+  srsRecObj.onend = () => {
+    srsRecActive = false;
+    document.getElementById('srs-mic-btn').classList.remove('animate-pulse');
+    document.getElementById('srs-mic-label').textContent = 'Jetzt sprechen';
+  };
+  srsRecObj.onresult = e => {
+    const got   = e.results[0][0].transcript.toLowerCase().trim();
+    const score = similarity(got, sent.target.toLowerCase().trim());
+    showSRSSpeechResult(got, score);
+  };
+  srsRecObj.onerror = e => {
+    if (e.error === 'not-allowed') skipSRSSpeech();
+  };
+  srsRecObj.start();
+}
+
+function showSRSSpeechResult(text, score) {
+  document.getElementById('srs-speech-idle').classList.add('hidden');
+  document.getElementById('srs-speech-result').classList.remove('hidden');
+  document.getElementById('srs-speech-text').textContent = '"' + text + '"';
+
+  let label, color;
+  if      (score >= 80) { label = score + '% – Top! 🎉';       color = '#34d399'; }
+  else if (score >= 60) { label = score + '% – Gut 👍';         color = '#818cf8'; }
+  else if (score >= 40) { label = score + '% – Weiter üben 💪'; color = '#fbbf24'; }
+  else                  { label = score + '% – Nochmal';         color = '#f87171'; }
+
+  const sc = document.getElementById('srs-speech-score');
+  sc.textContent = label;
+  sc.style.color = color;
+
+  const bar = document.getElementById('srs-speech-bar');
+  bar.style.backgroundColor = color;
+  bar.style.width = '0%';
+  setTimeout(() => bar.style.width = score + '%', 50);
+
+  enableRevealBtn();
+}
+
+function skipSRSSpeech() {
+  document.getElementById('srs-speech-idle').classList.add('hidden');
+  document.getElementById('srs-speech-result').classList.add('hidden');
+  enableRevealBtn();
+}
+
+function enableRevealBtn() {
+  const btn = document.getElementById('srs-reveal-btn');
+  btn.disabled  = false;
+  btn.className = 'w-full py-2.5 rounded-xl text-sm font-medium ' +
+                  'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer transition-colors';
+}
+
+function flipSRSCard() {
+  if (srsQ.flipped) return;
+  // Stop any running recognition
+  if (srsRecActive && srsRecObj) srsRecObj.stop();
+
+  document.getElementById('srs-flip').classList.add('flipped');
+  srsQ.flipped = true;
+
+  // Show TTS indicator, hide rating buttons
+  document.getElementById('srs-tts-indicator').classList.remove('hidden');
+  document.getElementById('srs-rating-btns').classList.add('hidden');
+
+  // Auto-play TTS of the TARGET sentence
+  const { island, sent } = srsQ.current;
+  const lang     = island.ttsLang || 'es-ES';
+  const utt      = new SpeechSynthesisUtterance(sent.target);
+  utt.lang       = lang;
+  const selName  = document.getElementById('srs-voice-sel')?.value;
+  const voice    = selName ? allVoices.find(v=>v.name===selName) : getPreferredVoice(lang);
+  if (voice) utt.voice = voice;
+
+  const showRating = () => {
+    document.getElementById('srs-tts-indicator').classList.add('hidden');
+    document.getElementById('srs-rating-btns').classList.remove('hidden');
+  };
+  utt.onend   = showRating;
+  utt.onerror = showRating;   // show buttons even if TTS fails
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utt);
+}
+
+function rateSRS(rating) {
+  const { entry, island, sent } = srsQ.current;
+  if (!sent) return;
+
+  // Update SRS data
+  const oldSrs = sent.srs || { ...SRS0 };
+  const newSrs = sm2(oldSrs, rating);
+  sent.srs = newSrs;
+
+  // Persist
+  const islands = DB.islands();
+  const isl = islands.find(i=>i.id===island.id);
+  if (isl) {
+    const s = (isl.sentences||[]).find(s=>s.id===sent.id);
+    if (s) s.srs = newSrs;
+  }
+  DB.setIslands(islands);
+
+  // Track history
+  const hist = DB.history();
+  const t    = tdStr();
+  if (!hist[t]) hist[t]={ reviewed:0, newLearned:0 };
+  hist[t].reviewed++;
+  if (oldSrs.state==='new') hist[t].newLearned++;
+  DB.setHistory(hist);
+
+  // Update counts display
+  const key=['again','hard','good','easy'][rating];
+  srsQ.counts[key]++;
+  document.getElementById('ss-again').textContent = srsQ.counts.again;
+  document.getElementById('ss-hard').textContent  = srsQ.counts.hard;
+  document.getElementById('ss-good').textContent  = srsQ.counts.good;
+  document.getElementById('ss-easy').textContent  = srsQ.counts.easy;
+
+  srsQ.done++;
+
+  // If rated Again → put back in again queue for re-review
+  if (rating === 0) {
+    srsQ.again.push(entry);
+  }
+
+  loadNextSRSCard();
+}
+
+function finishSRS() {
+  document.getElementById('srs-session').classList.add('hidden');
+  document.getElementById('srs-complete').classList.remove('hidden');
+  document.getElementById('sc-again').textContent = srsQ.counts.again;
+  document.getElementById('sc-hard').textContent  = srsQ.counts.hard;
+  document.getElementById('sc-good').textContent  = srsQ.counts.good;
+  document.getElementById('sc-easy').textContent  = srsQ.counts.easy;
+}
+
+function endSRS() { initSRSSetup(); }
+
+// ── settings ──────────────────────────────────────────────────
+function saveSettings() {
+  const n = Math.max(1, Math.min(100, parseInt(document.getElementById('set-new-per-day').value)||20));
+  DB.setSettings({ newPerDay:n });
+  closeModal('modal-settings');
+}
+
+function exportData() {
+  const blob=new Blob([JSON.stringify({
+    islands:DB.islands(),settings:DB.settings(),history:DB.history(),
+    exportedAt:new Date().toISOString()
+  },null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=`hyperlingua-${tdStr()}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+function triggerImport() { document.getElementById('file-import').click(); }
+function importData(e) {
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(d.islands)  DB.setIslands(d.islands);
+      if(d.settings) DB.setSettings(d.settings);
+      if(d.history)  DB.setHistory(d.history);
+      closeModal('modal-settings'); nav('dashboard');
+      alert('Import erfolgreich!');
+    }catch{ alert('Fehler: ungültige JSON-Datei.'); }
+  };
+  r.readAsText(f);
+}
+function clearData() {
+  if(!confirm('Wirklich ALLE Daten löschen?'))return;
+  ['hl_islands','hl_settings','hl_history','hl_updated_at','hl_last_sync'].forEach(k=>localStorage.removeItem(k));
+  closeModal('modal-settings'); nav('dashboard');
+}
+
+// ── modals ────────────────────────────────────────────────────
+function openModal(id) {
+  document.getElementById(id).classList.remove('hidden');
+  if(id==='modal-settings'){
+    const s=DB.settings();
+    document.getElementById('set-new-per-day').value=s.newPerDay||20;
+  }
+}
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+// ── keyboard ──────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape')['modal-island','modal-sentence','modal-settings','modal-auth'].forEach(closeModal);
+  if(e.code==='Space'&&!['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)){
+    if(currentView==='shadowing'&&shadow.islandId){e.preventDefault();playShadowTTS();}
+    if(currentView==='recall'&&document.getElementById('srs-session').offsetParent){
+      e.preventDefault(); flipSRSCard();
+    }
+  }
+  if(currentView==='shadowing'){
+    if(e.code==='ArrowRight')shadowNext();
+    if(e.code==='ArrowLeft') shadowPrev();
+  }
+  if(currentView==='recall'&&srsQ.flipped){
+    if(e.key==='1')rateSRS(0);
+    if(e.key==='2')rateSRS(1);
+    if(e.key==='3')rateSRS(2);
+    if(e.key==='4')rateSRS(3);
+  }
+});
+
+// ── sample data ───────────────────────────────────────────────
+function maybeAddSample() {
+  if(DB.islands().length>0)return;
+  // Write directly without touching hl_updated_at so sync always prefers cloud data on new devices
+  localStorage.setItem('hl_islands', JSON.stringify([{
+    id:uid(), name:'Begrüßungen', language:'Spanisch', ttsLang:'es-ES', createdAt:Date.now(),
+    sentences:[
+      {id:uid(),target:'¿Cómo estás?',           native:'Wie geht es dir?',             notes:'informell',addedAt:Date.now(),srs:{...SRS0}},
+      {id:uid(),target:'Buenos días, ¿cómo te llamas?', native:'Guten Morgen, wie heißt du?',notes:'',       addedAt:Date.now(),srs:{...SRS0}},
+      {id:uid(),target:'Mucho gusto en conocerte.',      native:'Schön, dich kennenzulernen.',notes:'formell',addedAt:Date.now(),srs:{...SRS0}},
+      {id:uid(),target:'Hasta luego, que te vaya bien.', native:'Tschüss, alles Gute.',       notes:'',       addedAt:Date.now(),srs:{...SRS0}},
+    ]
+  }]));
+}
+
+// ── init ──────────────────────────────────────────────────────
+(function init() {
+  maybeAddSample();
+  renderDashboard();
+  if('speechSynthesis' in window){
+    window.speechSynthesis.onvoiceschanged=loadVoices;
+    loadVoices();
+  }
+  initAuth();
+})();
+</script>
+</body>
+</html>
