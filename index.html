@@ -2539,24 +2539,8 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// ── sample data ───────────────────────────────────────────────
-function maybeAddSample() {
-  if(DB.islands().length>0)return;
-  // Write directly without touching hl_updated_at so sync always prefers cloud data on new devices
-  localStorage.setItem('hl_islands', JSON.stringify([{
-    id:uid(), name:'Begrüßungen', language:'Spanisch', ttsLang:'es-ES', createdAt:Date.now(),
-    sentences:[
-      {id:uid(),target:'¿Cómo estás?',           native:'Wie geht es dir?',             notes:'informell',addedAt:Date.now(),srs:{...SRS0}},
-      {id:uid(),target:'Buenos días, ¿cómo te llamas?', native:'Guten Morgen, wie heißt du?',notes:'',       addedAt:Date.now(),srs:{...SRS0}},
-      {id:uid(),target:'Mucho gusto en conocerte.',      native:'Schön, dich kennenzulernen.',notes:'formell',addedAt:Date.now(),srs:{...SRS0}},
-      {id:uid(),target:'Hasta luego, que te vaya bien.', native:'Tschüss, alles Gute.',       notes:'',       addedAt:Date.now(),srs:{...SRS0}},
-    ]
-  }]));
-}
-
 // ── init ──────────────────────────────────────────────────────
 (function init() {
-  maybeAddSample();
   renderDashboard();
   initAuth();
   if (!localStorage.getItem('hl_openai_key')) {
