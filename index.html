@@ -347,6 +347,7 @@
 
       <div class="text-center mb-6">
         <p id="shadow-sentence"    class="text-2xl font-medium text-gray-100 mb-2 leading-snug"></p>
+        <p id="shadow-ipa"         class="text-xs text-indigo-400/60 font-mono tracking-wide mb-1 min-h-[1.2em]"></p>
         <p id="shadow-translation" class="text-sm text-gray-500"></p>
       </div>
 
@@ -1383,6 +1384,29 @@ function ttsPlay(islandId, sentId) {
   ttsSpeak(sent.target, 1);
 }
 
+// ── IPA ───────────────────────────────────────────────────────
+async function getIPA(sentence, lang) {
+  const cacheKey = 'hl_ipa_' + sentence;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached !== null) return cached;
+  const apiKey = localStorage.getItem('hl_openai_key');
+  if (!apiKey) return '';
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: `Give only the IPA phonetic transcription for this sentence in ${lang}. Reply with only the IPA surrounded by forward slashes, nothing else: "${sentence}"` }],
+        max_tokens: 120
+      })
+    });
+    const ipa = (await res.json()).choices?.[0]?.message?.content?.trim() || '';
+    localStorage.setItem(cacheKey, ipa);
+    return ipa;
+  } catch { return ''; }
+}
+
 // ── shadowing ─────────────────────────────────────────────────
 let shadow = { islandId:null, sentences:[], idx:0 };
 let ttsPlaying=false;
@@ -1412,7 +1436,7 @@ function loadShadowIsland() {
     document.getElementById('shadow-player').classList.add('hidden');
     return;
   }
-  shadow.islandId=id; shadow.sentences=island.sentences; shadow.idx=0;
+  shadow.islandId=id; shadow.sentences=island.sentences; shadow.idx=0; shadow.ttsLang=island.ttsLang||'en-US';
   document.getElementById('shadow-empty').classList.add('hidden');
   document.getElementById('shadow-player').classList.remove('hidden');
   document.getElementById('voice-row').classList.remove('hidden');
@@ -1424,8 +1448,12 @@ function renderShadowCard() {
   document.getElementById('shadow-sentence').textContent    = s.target;
   document.getElementById('shadow-translation').textContent = s.native||'';
   document.getElementById('shadow-prog').textContent        = `${shadow.idx+1} / ${shadow.sentences.length}`;
+  document.getElementById('shadow-ipa').textContent         = '…';
   document.getElementById('pron-result').classList.add('hidden');
   stopTTS();
+  getIPA(s.target, shadow.ttsLang||'en-US').then(ipa => {
+    document.getElementById('shadow-ipa').textContent = ipa;
+  });
 }
 
 function shadowNext() { if(shadow.idx<shadow.sentences.length-1){shadow.idx++;renderShadowCard();} }
