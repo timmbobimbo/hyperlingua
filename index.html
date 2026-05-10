@@ -963,11 +963,24 @@
         </div>
       </div>
       <p id="auth-sync-status" class="text-xs text-emerald-400 mb-3 min-h-[16px]"></p>
-      <button id="auth-sync-btn" onclick="syncData()"
-              class="w-full mb-2 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500
-                     text-white text-sm font-semibold transition-colors">
-        Jetzt synchronisieren
-      </button>
+      <div class="flex gap-2 mb-2">
+        <button id="auth-upload-btn" onclick="syncUpload()"
+                class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                       text-white text-sm font-semibold transition-colors flex items-center justify-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+          Hochladen
+        </button>
+        <button id="auth-download-btn" onclick="syncDownload()"
+                class="flex-1 py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600
+                       text-gray-200 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          Herunterladen
+        </button>
+      </div>
       <button onclick="logoutUser()"
               class="w-full py-2 rounded-xl bg-gray-800 hover:bg-gray-700
                      text-gray-400 text-sm font-medium transition-colors">Ausloggen</button>
@@ -1182,50 +1195,59 @@ async function logoutUser() {
   await supa.auth.signOut();
 }
 
-async function syncData() {
+function setSyncStatus(text, isError) {
+  const s = document.getElementById('auth-sync-status');
+  s.style.color = isError ? '#f87171' : '';
+  s.textContent = text;
+}
+
+async function syncUpload() {
   if (!authUser) { openModal('modal-auth'); return; }
-  const btn    = document.getElementById('auth-sync-btn');
-  const status = document.getElementById('auth-sync-status');
-  btn.disabled = true; btn.textContent = 'Synchronisiert…'; status.textContent = '';
+  const btn = document.getElementById('auth-upload-btn');
+  btn.disabled = true; setSyncStatus('Lädt hoch…');
   try {
-    const localTs = localStorage.getItem('hl_updated_at') || '0';
-    const { data: remote, error: fetchErr } = await supa
-      .from('user_data').select('*').eq('id', authUser.id).maybeSingle();
-    if (fetchErr) throw fetchErr;
-
-    const remoteTs   = remote?.updated_at || '0';
-    const localNewer = localTs >= remoteTs;
-
-    if (localNewer) {
-      const now = new Date().toISOString();
-      const { error: upsertErr } = await supa.from('user_data').upsert({
-        id: authUser.id,
-        islands:    DB.islands(),
-        settings:   DB.settings(),
-        history:    DB.history(),
-        updated_at: now
-      });
-      if (upsertErr) throw upsertErr;
-      localStorage.setItem('hl_updated_at', now);
-      localStorage.setItem('hl_last_sync',  now);
-      status.textContent = '↑ Daten hochgeladen';
-    } else {
-      DB.setIslands(remote.islands   || []);
-      DB.setSettings(remote.settings || { newPerDay: 20 });
-      DB.setHistory(remote.history   || {});
-      const now = new Date().toISOString();
-      localStorage.setItem('hl_updated_at', remote.updated_at);
-      localStorage.setItem('hl_last_sync',  now);
-      status.textContent = '↓ Daten heruntergeladen';
-      renderDashboard();
-    }
-    document.getElementById('auth-last-sync').textContent =
-      new Date().toLocaleString('de');
+    const now = new Date().toISOString();
+    const { error } = await supa.from('user_data').upsert({
+      id: authUser.id,
+      islands:    DB.islands(),
+      settings:   DB.settings(),
+      history:    DB.history(),
+      updated_at: now
+    });
+    if (error) throw error;
+    localStorage.setItem('hl_updated_at', now);
+    localStorage.setItem('hl_last_sync',  now);
+    document.getElementById('auth-last-sync').textContent = new Date().toLocaleString('de');
+    setSyncStatus('↑ Hochgeladen');
   } catch(err) {
-    status.style.color = '#f87171';
-    status.textContent = 'Fehler: ' + err.message;
+    setSyncStatus('Fehler: ' + err.message, true);
   } finally {
-    btn.disabled = false; btn.textContent = 'Jetzt synchronisieren';
+    btn.disabled = false;
+  }
+}
+
+async function syncDownload() {
+  if (!authUser) { openModal('modal-auth'); return; }
+  const btn = document.getElementById('auth-download-btn');
+  btn.disabled = true; setSyncStatus('Lädt herunter…');
+  try {
+    const { data: remote, error } = await supa
+      .from('user_data').select('*').eq('id', authUser.id).maybeSingle();
+    if (error) throw error;
+    if (!remote) { setSyncStatus('Kein Backup gefunden.'); btn.disabled = false; return; }
+    DB.setIslands(remote.islands   || []);
+    DB.setSettings(remote.settings || { newPerDay: 20 });
+    DB.setHistory(remote.history   || {});
+    const now = new Date().toISOString();
+    localStorage.setItem('hl_updated_at', remote.updated_at);
+    localStorage.setItem('hl_last_sync',  now);
+    document.getElementById('auth-last-sync').textContent = new Date().toLocaleString('de');
+    setSyncStatus('↓ Heruntergeladen');
+    renderDashboard();
+  } catch(err) {
+    setSyncStatus('Fehler: ' + err.message, true);
+  } finally {
+    btn.disabled = false;
   }
 }
 
