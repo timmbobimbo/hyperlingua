@@ -436,16 +436,6 @@
           <option value="all">Alle Islands</option>
         </select>
       </div>
-      <div>
-        <label class="block text-xs text-gray-500 mb-1.5 uppercase tracking-widest">Richtung</label>
-        <select id="srs-dir"
-                class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
-                       focus:border-indigo-500 focus:outline-none" style="background:#1a1a24">
-          <option value="target">Zielsprache → Deutsch</option>
-          <option value="native">Deutsch → Zielsprache</option>
-          <option value="random">Zufällig</option>
-        </select>
-      </div>
     </div>
 
     <!-- Voice row (Review) -->
@@ -1616,7 +1606,7 @@ document.addEventListener('change', e => {
 function startSRS() {
   const islands   = DB.islands();
   const islandId  = document.getElementById('srs-island-sel').value;
-  const dir       = document.getElementById('srs-dir').value;
+  const dir       = 'native';
   const settings  = DB.settings();
   const maxNew    = settings.newPerDay || 20;
   const now       = Date.now();
@@ -1640,9 +1630,7 @@ function startSRS() {
   shuf(reviewCards); shuf(learningCards); shuf(newCards);
   newCards=newCards.slice(0, maxNew);
 
-  // Determine direction per card
-  const resolveDir=()=> dir==='random'?(Math.random()>.5?'target':'native'):dir;
-  const mkCard=(entry)=>({ ...entry, dir:resolveDir() });
+  const mkCard=(entry)=>({ ...entry, dir:'native' });
 
   const queue=[...reviewCards,...learningCards,...newCards].map(mkCard);
   if (!queue.length) { alert('Keine fälligen Karten.'); return; }
