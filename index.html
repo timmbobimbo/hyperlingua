@@ -1926,7 +1926,7 @@ async function importLibraryIsland(file, name) {
     DB.setIslands(islands);
     closeModal('modal-library');
     nav('islands');
-    renderIslandsGrid();
+    renderIslands();
   } catch(e) {
     alert('Fehler beim Importieren: ' + e.message);
   }
