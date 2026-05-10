@@ -297,20 +297,17 @@
 
   <!-- Voice row -->
   <div id="voice-row" class="hidden mb-5">
-    <div class="flex items-center justify-between mb-1.5">
-      <label class="text-xs text-gray-500 uppercase tracking-widest">Stimme</label>
-      <label class="flex items-center gap-1.5 cursor-pointer text-xs text-gray-600 select-none">
-        <input type="checkbox" id="voice-show-all" onchange="populateVoiceSel()"
-               class="w-3 h-3 rounded accent-indigo-500">
-        Alle anzeigen
-      </label>
-    </div>
-    <select id="voice-sel" onchange="saveVoicePref()"
+    <label class="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">Stimme</label>
+    <select id="voice-sel"
             class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
                    focus:border-indigo-500 focus:outline-none" style="background:#1a1a24">
-      <option value="">– wird geladen –</option>
+      <option value="nova">Nova (weiblich)</option>
+      <option value="alloy">Alloy (neutral)</option>
+      <option value="echo">Echo (männlich)</option>
+      <option value="fable">Fable (britisch)</option>
+      <option value="onyx">Onyx (tief)</option>
+      <option value="shimmer">Shimmer (weiblich, sanft)</option>
     </select>
-    <p id="voice-hint" class="text-xs text-gray-700 mt-1.5"></p>
   </div>
 
   <div id="shadow-empty" class="text-center py-16 text-gray-600">
@@ -443,20 +440,17 @@
 
     <!-- Voice row (Review) -->
     <div id="srs-voice-row" class="hidden mb-5">
-      <div class="flex items-center justify-between mb-1.5">
-        <label class="text-xs text-gray-500 uppercase tracking-widest">Stimme</label>
-        <label class="flex items-center gap-1.5 cursor-pointer text-xs text-gray-600 select-none">
-          <input type="checkbox" id="srs-voice-show-all" onchange="populateSRSVoiceSel()"
-                 class="w-3 h-3 rounded accent-indigo-500">
-          Alle anzeigen
-        </label>
-      </div>
-      <select id="srs-voice-sel" onchange="saveSRSVoicePref()"
+      <label class="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">Stimme</label>
+      <select id="srs-voice-sel"
               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
                      focus:border-indigo-500 focus:outline-none" style="background:#1a1a24">
-        <option value="">– wird geladen –</option>
+        <option value="nova">Nova (weiblich)</option>
+        <option value="alloy">Alloy (neutral)</option>
+        <option value="echo">Echo (männlich)</option>
+        <option value="fable">Fable (britisch)</option>
+        <option value="onyx">Onyx (tief)</option>
+        <option value="shimmer">Shimmer (weiblich, sanft)</option>
       </select>
-      <p id="srs-voice-hint" class="text-xs text-gray-700 mt-1.5"></p>
     </div>
 
     <div id="srs-no-cards" class="hidden mb-4 p-4 rounded-xl border border-gray-800 text-center
@@ -816,6 +810,13 @@
                class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200
                       border border-gray-700 focus:border-indigo-500 focus:outline-none"
                style="background:#1f1f2b">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">OpenAI API Key (für TTS)</label>
+        <input id="set-openai-key" type="password" placeholder="sk-proj-..."
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
+                      focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b">
+        <p class="text-xs text-gray-600 mt-1">Wird nur lokal gespeichert, nie auf GitHub oder Server</p>
       </div>
       <div class="pt-3 border-t border-gray-800">
         <p class="text-xs text-gray-600 uppercase tracking-widest mb-3">Daten</p>
@@ -1296,44 +1297,13 @@ function deleteIsland() {
 }
 
 // ── TTS / voices ──────────────────────────────────────────────
-let allVoices = [];
-
-function loadVoices() {
-  allVoices = window.speechSynthesis.getVoices();
-  if (shadow.islandId && allVoices.length) populateVoiceSel();
-  const srsIslandSel = document.getElementById('srs-island-sel');
-  if (srsIslandSel && srsIslandSel.value && srsIslandSel.value !== 'all' && allVoices.length) populateSRSVoiceSel();
-}
-
-function getPreferredVoice(lang) {
-  if (!allVoices.length) return null;
-  const saved = localStorage.getItem('hl_voice_'+lang);
-  if (saved) { const v=allVoices.find(v=>v.name===saved); if(v) return v; }
-  const prefix = lang.split('-')[0];
-  const pool   = (allVoices.filter(v=>v.lang===lang).length
-    ? allVoices.filter(v=>v.lang===lang)
-    : allVoices.filter(v=>v.lang.toLowerCase().startsWith(prefix)));
-  if (!pool.length) return null;
-  return pool.find(v=>/enhanced|premium/i.test(v.name))
-      || pool.find(v=>!/compact/i.test(v.name))
-      || pool[0];
-}
+let currentAudio = null;
 
 function ttsPlay(islandId, sentId) {
-  const island = DB.islands().find(i=>i.id===islandId);
-  const sent   = (island?.sentences||[]).find(s=>s.id===sentId);
+  const island = DB.islands().find(i => i.id === islandId);
+  const sent   = (island?.sentences||[]).find(s => s.id === sentId);
   if (!sent) return;
-  speakText(sent.target, island.ttsLang||'es-ES', 1);
-}
-
-function speakText(text, lang, rate=1, voiceName=null) {
-  if (!('speechSynthesis' in window)) { alert('TTS nicht verfügbar.'); return; }
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang=lang; u.rate=rate;
-  const v = voiceName ? allVoices.find(v=>v.name===voiceName) : getPreferredVoice(lang);
-  if (v) u.voice=v;
-  return window.speechSynthesis.speak(u), u;
+  ttsSpeak(sent.target, 1);
 }
 
 // ── shadowing ─────────────────────────────────────────────────
@@ -1368,87 +1338,8 @@ function loadShadowIsland() {
   shadow.islandId=id; shadow.sentences=island.sentences; shadow.idx=0;
   document.getElementById('shadow-empty').classList.add('hidden');
   document.getElementById('shadow-player').classList.remove('hidden');
-  populateVoiceSel();
-  renderShadowCard();
-}
-
-function populateVoiceSel() {
-  const island = DB.islands().find(i=>i.id===shadow.islandId);
-  if (!island) return;
-  const ttsLang = island.ttsLang||'es-ES';
-  const prefix  = ttsLang.split('-')[0];
-  const showAll = document.getElementById('voice-show-all').checked;
-
-  let voices = showAll ? allVoices : (() => {
-    const ex = allVoices.filter(v=>v.lang===ttsLang);
-    if (ex.length) return ex;
-    const bp = allVoices.filter(v=>v.lang.toLowerCase().startsWith(prefix));
-    return bp.length ? bp : allVoices;
-  })();
-
-  const saved = localStorage.getItem('hl_voice_'+ttsLang);
-  const auto  = getPreferredVoice(ttsLang);
-  const sel   = document.getElementById('voice-sel');
-  sel.innerHTML = `<option value="">Standard (${auto?auto.name:'automatisch'})</option>` +
-    voices.map(v=>{
-      const badge=/enhanced|premium/i.test(v.name)?' ⭐':/compact/i.test(v.name)?' ·':'';
-      return `<option value="${esc(v.name)}" ${saved===v.name?'selected':''}>${esc(v.name)}${badge} [${v.lang}]</option>`;
-    }).join('');
-  document.getElementById('voice-hint').textContent = voices.length
-    ? `${voices.length} Stimme${voices.length!==1?'n':''} · ⭐ = Enhanced/Premium`
-    : 'Keine passenden Stimmen – "Alle anzeigen" aktivieren';
   document.getElementById('voice-row').classList.remove('hidden');
-}
-
-function saveVoicePref() {
-  const island = DB.islands().find(i=>i.id===shadow.islandId);
-  if (!island) return;
-  const val=document.getElementById('voice-sel').value;
-  if(val) localStorage.setItem('hl_voice_'+island.ttsLang,val);
-  else    localStorage.removeItem('hl_voice_'+island.ttsLang);
-}
-
-function populateSRSVoiceSel() {
-  const islandId = document.getElementById('srs-island-sel')?.value;
-  if (!islandId || islandId === 'all') {
-    document.getElementById('srs-voice-row').classList.add('hidden');
-    return;
-  }
-  const island = DB.islands().find(i=>i.id===islandId);
-  if (!island) { document.getElementById('srs-voice-row').classList.add('hidden'); return; }
-  const ttsLang = island.ttsLang || 'es-ES';
-  const prefix  = ttsLang.split('-')[0];
-  const showAll = document.getElementById('srs-voice-show-all').checked;
-
-  let voices = showAll ? allVoices : (() => {
-    const ex = allVoices.filter(v=>v.lang===ttsLang);
-    if (ex.length) return ex;
-    const bp = allVoices.filter(v=>v.lang.toLowerCase().startsWith(prefix));
-    return bp.length ? bp : allVoices;
-  })();
-
-  const saved = localStorage.getItem('hl_voice_'+ttsLang);
-  const auto  = getPreferredVoice(ttsLang);
-  const sel   = document.getElementById('srs-voice-sel');
-  sel.innerHTML = `<option value="">Standard (${auto?auto.name:'automatisch'})</option>` +
-    voices.map(v=>{
-      const badge=/enhanced|premium/i.test(v.name)?' ⭐':/compact/i.test(v.name)?' ·':'';
-      return `<option value="${esc(v.name)}" ${saved===v.name?'selected':''}>${esc(v.name)}${badge} [${v.lang}]</option>`;
-    }).join('');
-  document.getElementById('srs-voice-hint').textContent = voices.length
-    ? `${voices.length} Stimme${voices.length!==1?'n':''} · ⭐ = Enhanced/Premium`
-    : 'Keine passenden Stimmen – "Alle anzeigen" aktivieren';
-  document.getElementById('srs-voice-row').classList.remove('hidden');
-}
-
-function saveSRSVoicePref() {
-  const islandId = document.getElementById('srs-island-sel')?.value;
-  if (!islandId || islandId === 'all') return;
-  const island = DB.islands().find(i=>i.id===islandId);
-  if (!island) return;
-  const val = document.getElementById('srs-voice-sel').value;
-  if (val) localStorage.setItem('hl_voice_'+island.ttsLang, val);
-  else     localStorage.removeItem('hl_voice_'+island.ttsLang);
+  renderShadowCard();
 }
 
 function renderShadowCard() {
@@ -1464,36 +1355,50 @@ function shadowNext() { if(shadow.idx<shadow.sentences.length-1){shadow.idx++;re
 function shadowPrev() { if(shadow.idx>0){shadow.idx--;renderShadowCard();} }
 
 function stopTTS() {
-  window.speechSynthesis&&window.speechSynthesis.cancel();
-  ttsPlaying=false;
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  window.speechSynthesis && window.speechSynthesis.cancel();
+  ttsPlaying = false;
   document.getElementById('icon-play').classList.remove('hidden');
   document.getElementById('icon-stop').classList.add('hidden');
   document.getElementById('waveform').classList.add('hidden');
-  document.getElementById('waveform-placeholder').classList.remove('hidden');
+}
+
+async function ttsSpeak(text, rate = 1) {
+  const key = localStorage.getItem('hl_openai_key');
+  if (!key) { alert('Bitte zuerst den OpenAI API Key in den Einstellungen eintragen.'); return; }
+  if (ttsPlaying) { stopTTS(); return; }
+
+  const voice = document.getElementById('voice-sel')?.value || 'nova';
+  ttsPlaying = true;
+  document.getElementById('icon-play').classList.add('hidden');
+  document.getElementById('icon-stop').classList.remove('hidden');
+  document.getElementById('waveform').classList.remove('hidden');
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'tts-1', input: text, voice, speed: rate })
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'API-Fehler'); }
+    const url = URL.createObjectURL(await res.blob());
+    currentAudio = new Audio(url);
+    currentAudio.onended = () => { URL.revokeObjectURL(url); stopTTS(); };
+    currentAudio.onerror = stopTTS;
+    await currentAudio.play();
+  } catch(e) {
+    stopTTS();
+    alert('TTS Fehler: ' + e.message);
+  }
 }
 
 function playShadowTTS() {
   if (ttsPlaying) { stopTTS(); return; }
-  const island=DB.islands().find(i=>i.id===shadow.islandId);
+  const island = DB.islands().find(i => i.id === shadow.islandId);
   if (!island) return;
   const s    = shadow.sentences[shadow.idx];
-  const rate = parseFloat(document.getElementById('tts-rate').value)||1;
-  const lang = island.ttsLang||'es-ES';
-  const u    = new SpeechSynthesisUtterance(s.target);
-  u.lang=lang; u.rate=rate;
-  const selName = document.getElementById('voice-sel').value;
-  const voice   = selName?allVoices.find(v=>v.name===selName):getPreferredVoice(lang);
-  if (voice) u.voice=voice;
-  u.onstart=()=>{
-    ttsPlaying=true;
-    document.getElementById('icon-play').classList.add('hidden');
-    document.getElementById('icon-stop').classList.remove('hidden');
-    document.getElementById('waveform').classList.remove('hidden');
-    document.getElementById('waveform-placeholder').classList.add('hidden');
-  };
-  u.onend=u.onerror=stopTTS;
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(u);
+  const rate = parseFloat(document.getElementById('tts-rate').value) || 1;
+  ttsSpeak(s.target, rate);
 }
 
 // pronunciation check
@@ -1580,7 +1485,7 @@ function initSRSSetup() {
     islands.map(i=>`<option value="${i.id}">${esc(i.name)}</option>`).join('');
 
   refreshSRSCounts();
-  populateSRSVoiceSel();
+  document.getElementById('srs-voice-row').classList.remove('hidden');
 
   document.getElementById('srs-setup').classList.remove('hidden');
   document.getElementById('srs-session').classList.add('hidden');
@@ -1603,7 +1508,7 @@ function refreshSRSCounts() {
 }
 
 document.addEventListener('change', e => {
-  if (e.target.id === 'srs-island-sel') { refreshSRSCounts(); populateSRSVoiceSel(); }
+  if (e.target.id === 'srs-island-sel') { refreshSRSCounts(); }
 });
 
 function startSRS() {
@@ -1811,21 +1716,26 @@ function flipSRSCard() {
 
   // Auto-play TTS of the TARGET sentence
   const { island, sent } = srsQ.current;
-  const lang     = island.ttsLang || 'es-ES';
-  const utt      = new SpeechSynthesisUtterance(sent.target);
-  utt.lang       = lang;
-  const selName  = document.getElementById('srs-voice-sel')?.value;
-  const voice    = selName ? allVoices.find(v=>v.name===selName) : getPreferredVoice(lang);
-  if (voice) utt.voice = voice;
-
+  const key = localStorage.getItem('hl_openai_key');
   const showRating = () => {
     document.getElementById('srs-tts-indicator').classList.add('hidden');
     document.getElementById('srs-rating-btns').classList.remove('hidden');
   };
-  utt.onend   = showRating;
-  utt.onerror = showRating;   // show buttons even if TTS fails
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utt);
+
+  if (!key) { showRating(); return; }
+
+  const voice = document.getElementById('srs-voice-sel')?.value || 'nova';
+  fetch('https://api.openai.com/v1/audio/speech', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'tts-1', input: sent.target, voice })
+  }).then(r => r.blob()).then(blob => {
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.onended = () => { URL.revokeObjectURL(url); showRating(); };
+    audio.onerror = showRating;
+    audio.play();
+  }).catch(showRating);
 }
 
 function rateSRS(rating) {
@@ -1892,6 +1802,9 @@ function endSRS() { initSRSSetup(); }
 function saveSettings() {
   const n = Math.max(1, Math.min(100, parseInt(document.getElementById('set-new-per-day').value)||20));
   DB.setSettings({ newPerDay:n });
+  const k = document.getElementById('set-openai-key').value.trim();
+  if (k) localStorage.setItem('hl_openai_key', k);
+  else localStorage.removeItem('hl_openai_key');
   closeModal('modal-settings');
 }
 
@@ -1929,9 +1842,11 @@ function clearData() {
 // ── modals ────────────────────────────────────────────────────
 function openModal(id) {
   document.getElementById(id).classList.remove('hidden');
-  if(id==='modal-settings'){
-    const s=DB.settings();
-    document.getElementById('set-new-per-day').value=s.newPerDay||20;
+  if (id === 'modal-settings') {
+    const s = DB.settings();
+    document.getElementById('set-new-per-day').value = s.newPerDay || 20;
+    const k = localStorage.getItem('hl_openai_key') || '';
+    document.getElementById('set-openai-key').value = k ? '••••••••••••' : '';
   }
 }
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
@@ -1976,10 +1891,6 @@ function maybeAddSample() {
 (function init() {
   maybeAddSample();
   renderDashboard();
-  if('speechSynthesis' in window){
-    window.speechSynthesis.onvoiceschanged=loadVoices;
-    loadVoices();
-  }
   initAuth();
 })();
 </script>
