@@ -232,14 +232,25 @@
       <h2 class="text-2xl font-bold">Language Islands</h2>
       <p class="text-sm text-gray-500 mt-0.5">Sätze im Kontext – keine Vokabellisten</p>
     </div>
-    <button onclick="openAddIsland()"
-            class="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500
-                   text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-      </svg>
-      Neue Island
-    </button>
+    <div class="flex gap-2">
+      <button onclick="openLibrary()"
+              class="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700
+                     text-gray-300 px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+        </svg>
+        Bibliothek
+      </button>
+      <button onclick="openAddIsland()"
+              class="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500
+                     text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Neue Island
+      </button>
+    </div>
   </div>
   <div id="islands-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
 
@@ -842,6 +853,20 @@
               class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500
                      text-white text-sm font-medium transition-colors">Speichern</button>
     </div>
+  </div>
+</div>
+
+<!-- Library Modal -->
+<div id="modal-library" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/60" style="backdrop-filter:blur(4px)"
+       onclick="closeModal('modal-library')"></div>
+  <div class="relative w-full max-w-md rounded-2xl border border-gray-700 p-6 fade-up" style="background:#16161e">
+    <h3 class="text-lg font-semibold mb-1">Island-Bibliothek</h3>
+    <p class="text-xs text-gray-500 mb-4">Fertige Pakete mit einem Klick importieren</p>
+    <div id="library-list" class="space-y-3"></div>
+    <button onclick="closeModal('modal-library')"
+            class="w-full mt-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700
+                   text-gray-400 text-sm font-medium transition-colors">Schließen</button>
   </div>
 </div>
 
@@ -1851,6 +1876,62 @@ function finishSRS() {
 function endSRS() { initSRSSetup(); }
 
 // ── settings ──────────────────────────────────────────────────
+async function openLibrary() {
+  openModal('modal-library');
+  const list = document.getElementById('library-list');
+  list.innerHTML = '<p class="text-sm text-gray-500">Wird geladen…</p>';
+  try {
+    const res  = await fetch('islands/catalog.json');
+    const catalog = await res.json();
+    const existing = DB.islands().map(i => i.name);
+    list.innerHTML = catalog.map(pkg => `
+      <div class="rounded-xl border border-gray-800 p-4" style="background:#111117">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="font-medium text-sm">${esc(pkg.name)}</span>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-400">${esc(pkg.level)}</span>
+            </div>
+            <p class="text-xs text-gray-500 mb-1">${esc(pkg.description)}</p>
+            <p class="text-xs text-gray-600">${pkg.sentences} Sätze · ${esc(pkg.language)}</p>
+          </div>
+          <button onclick="importLibraryIsland('${pkg.file}', '${esc(pkg.name)}')"
+                  ${existing.includes(pkg.name) ? 'disabled' : ''}
+                  class="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
+                         ${existing.includes(pkg.name)
+                           ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                           : 'bg-indigo-600 hover:bg-indigo-500 text-white'}">
+            ${existing.includes(pkg.name) ? 'Importiert ✓' : 'Importieren'}
+          </button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    list.innerHTML = '<p class="text-sm text-rose-400">Fehler beim Laden der Bibliothek.</p>';
+  }
+}
+
+async function importLibraryIsland(file, name) {
+  try {
+    const res  = await fetch('islands/' + file);
+    const data = await res.json();
+    const now  = Date.now();
+    const island = {
+      id: uid(), name: data.name, language: data.language,
+      ttsLang: data.ttsLang, createdAt: now,
+      sentences: data.sentences.map(s => ({ ...s, id: uid(), addedAt: now, srs: { ...SRS0 } }))
+    };
+    const islands = DB.islands();
+    islands.push(island);
+    DB.setIslands(islands);
+    closeModal('modal-library');
+    nav('islands');
+    renderIslandsGrid();
+  } catch(e) {
+    alert('Fehler beim Importieren: ' + e.message);
+  }
+}
+
 function saveOnboardingKey() {
   const k = document.getElementById('onboarding-key').value.trim();
   if (!k) { alert('Bitte den API Key eintragen.'); return; }

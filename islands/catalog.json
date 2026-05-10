@@ -1,0 +1,11 @@
+[
+  {
+    "id": "business-english-b1",
+    "file": "business-english-b1.json",
+    "name": "Business English B1",
+    "language": "Englisch",
+    "level": "B1",
+    "sentences": 50,
+    "description": "Unverzichtbare Sätze für den Arbeitsalltag — Meetings, E-Mails, Feedback und mehr."
+  }
+]
