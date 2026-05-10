@@ -12,7 +12,6 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@1.42.0/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js"></script>
   <style>
     body { background:#09090f; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
 
@@ -80,6 +79,30 @@
   </style>
 </head>
 <body class="text-gray-100 min-h-screen">
+
+<!-- AUTH GATE -->
+<div id="auth-gate" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center p-6"
+     style="background:#09090f">
+  <div class="text-3xl font-bold text-indigo-400 mb-1">⚡ HyperLingua</div>
+  <p class="text-sm text-gray-500 mb-8">Sprachenlernen mit KI — kostenlos starten</p>
+  <div class="w-full max-w-sm space-y-3">
+    <input id="gate-email" type="email" placeholder="E-Mail"
+           class="w-full rounded-xl px-4 py-3 text-sm text-gray-200 border border-gray-700
+                  focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b">
+    <input id="gate-pass" type="password" placeholder="Passwort"
+           class="w-full rounded-xl px-4 py-3 text-sm text-gray-200 border border-gray-700
+                  focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b"
+           onkeydown="if(event.key==='Enter')gateLogin()">
+    <p id="gate-error" class="text-xs text-rose-400 min-h-[16px]"></p>
+    <button onclick="gateLogin()"
+            class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                   text-white font-semibold transition-colors">Einloggen</button>
+    <button onclick="gateSignup()"
+            class="w-full py-3 rounded-xl bg-gray-800 hover:bg-gray-700
+                   text-gray-300 font-medium transition-colors">Registrieren</button>
+  </div>
+  <p class="text-xs text-gray-700 mt-8">500 kostenlose Credits bei Registrierung</p>
+</div>
 
 <!-- NAV -->
 <header class="sticky top-0 z-40 border-b border-gray-800"
@@ -960,6 +983,7 @@
         <div>
           <p id="auth-user-email" class="text-sm font-medium text-gray-200"></p>
           <p class="text-xs text-gray-600">Letzter Sync: <span id="auth-last-sync">–</span></p>
+          <p class="text-xs text-violet-400 font-medium mt-0.5"><span id="credit-balance">–</span></p>
         </div>
       </div>
       <p id="auth-sync-status" class="text-xs text-emerald-400 mb-3 min-h-[16px]"></p>
@@ -1004,23 +1028,6 @@
                       border border-gray-700 focus:border-indigo-500 focus:outline-none"
                style="background:#1f1f2b">
       </div>
-      <div>
-        <label class="block text-xs text-gray-500 mb-1.5">OpenAI API Key (für TTS + Transkription)</label>
-        <input id="set-openai-key" type="password" placeholder="sk-proj-..."
-               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
-                      focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b">
-        <p class="text-xs text-gray-600 mt-1">Wird nur lokal gespeichert, nie auf GitHub oder Server</p>
-      </div>
-      <div>
-        <label class="block text-xs text-gray-500 mb-1.5">Azure Speech Key (für Aussprache-Check)</label>
-        <input id="set-azure-key" type="password" placeholder="Azure Key eintragen…"
-               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
-                      focus:border-indigo-500 focus:outline-none mb-1.5" style="background:#1f1f2b">
-        <input id="set-azure-region" type="text" placeholder="Region (z.B. westeurope)"
-               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
-                      focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b">
-        <p class="text-xs text-gray-600 mt-1">Wird nur lokal gespeichert</p>
-      </div>
       <div class="pt-3 border-t border-gray-800">
         <p class="text-xs text-gray-600 uppercase tracking-widest mb-3">Daten</p>
         <button onclick="exportData()"
@@ -1062,57 +1069,6 @@
   </div>
 </div>
 
-<!-- Onboarding Modal -->
-<div id="modal-onboarding" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-  <div class="absolute inset-0 bg-black/70" style="backdrop-filter:blur(4px)"></div>
-  <div class="relative w-full max-w-md rounded-2xl border border-gray-700 p-6 fade-up" style="background:#16161e">
-    <div class="text-2xl mb-1">👋 Willkommen bei HyperLingua</div>
-    <p class="text-sm text-gray-400 mb-5">Für die Sprachausgabe brauchst du einen kostenlosen OpenAI API Key. Einmalig einrichten — dauert 5 Minuten.</p>
-
-    <div class="space-y-3 mb-5">
-      <div class="flex gap-3 items-start">
-        <span class="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
-        <div>
-          <p class="text-sm text-gray-200 font-medium">OpenAI Account erstellen</p>
-          <p class="text-xs text-gray-500">Geh auf <span class="text-indigo-400">platform.openai.com</span> und registriere dich</p>
-        </div>
-      </div>
-      <div class="flex gap-3 items-start">
-        <span class="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
-        <div>
-          <p class="text-sm text-gray-200 font-medium">$5 Guthaben aufladen</p>
-          <p class="text-xs text-gray-500">Billing → Add to credit balance → $5 (reicht für tausende Sätze)</p>
-        </div>
-      </div>
-      <div class="flex gap-3 items-start">
-        <span class="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
-        <div>
-          <p class="text-sm text-gray-200 font-medium">API Key erstellen</p>
-          <p class="text-xs text-gray-500">API keys → Create new secret key → Key kopieren</p>
-        </div>
-      </div>
-      <div class="flex gap-3 items-start">
-        <span class="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center flex-shrink-0 mt-0.5">4</span>
-        <div class="w-full">
-          <p class="text-sm text-gray-200 font-medium mb-1.5">Key hier eintragen</p>
-          <input id="onboarding-key" type="password" placeholder="sk-proj-..."
-                 class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
-                        focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b">
-          <p class="text-xs text-gray-600 mt-1">Wird nur lokal auf deinem Gerät gespeichert</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="flex gap-3">
-      <button onclick="skipOnboarding()"
-              class="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700
-                     text-gray-400 text-sm font-medium transition-colors">Später</button>
-      <button onclick="saveOnboardingKey()"
-              class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500
-                     text-white text-sm font-medium transition-colors">Speichern & loslegen</button>
-    </div>
-  </div>
-</div>
 
 <!-- ══════════════════════ JAVASCRIPT ══════════════════════ -->
 <script>
@@ -1150,8 +1106,10 @@ async function initAuth() {
 }
 
 function updateAuthUI() {
-  const dot = document.getElementById('auth-dot');
+  const dot  = document.getElementById('auth-dot');
+  const gate = document.getElementById('auth-gate');
   if (authUser) {
+    gate.classList.add('hidden');
     dot.classList.remove('hidden');
     document.getElementById('auth-logged-out').classList.add('hidden');
     document.getElementById('auth-logged-in').classList.remove('hidden');
@@ -1159,10 +1117,70 @@ function updateAuthUI() {
     const ls = localStorage.getItem('hl_last_sync');
     document.getElementById('auth-last-sync').textContent =
       ls ? new Date(ls).toLocaleString('de') : 'Noch nie';
+    fetchCredits();
   } else {
+    gate.classList.remove('hidden');
     dot.classList.add('hidden');
     document.getElementById('auth-logged-out').classList.remove('hidden');
     document.getElementById('auth-logged-in').classList.add('hidden');
+  }
+}
+
+async function fetchCredits() {
+  const { data } = await supa.from('user_credits').select('balance').eq('user_id', authUser.id).maybeSingle();
+  updateCreditDisplay(data?.balance ?? '–');
+}
+
+function updateCreditDisplay(balance) {
+  const el = document.getElementById('credit-balance');
+  if (el) el.textContent = balance + ' Credits';
+}
+
+async function callProxy(action, params) {
+  const { data: { session } } = await supa.auth.getSession();
+  if (!session) { document.getElementById('auth-gate').classList.remove('hidden'); throw new Error('not_logged_in'); }
+  const res = await fetch(SUPA_URL + '/functions/v1/ai-proxy', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + session.access_token,
+      'apikey': SUPA_KEY
+    },
+    body: JSON.stringify({ action, ...params })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    if (data.error === 'credits_exhausted') {
+      updateCreditDisplay(0);
+      alert('Deine 500 kostenlosen Credits sind aufgebraucht. Bitte wende dich an den Administrator für mehr Credits.');
+      throw new Error('credits_exhausted');
+    }
+    throw new Error(data.error || 'Proxy-Fehler ' + res.status);
+  }
+  if (data.balance !== undefined) updateCreditDisplay(data.balance);
+  return data;
+}
+
+async function gateLogin() {
+  const email = document.getElementById('gate-email').value.trim();
+  const pass  = document.getElementById('gate-pass').value;
+  const err   = document.getElementById('gate-error');
+  err.textContent = '';
+  const { error } = await supa.auth.signInWithPassword({ email, password: pass });
+  if (error) err.textContent = error.message;
+}
+
+async function gateSignup() {
+  const email = document.getElementById('gate-email').value.trim();
+  const pass  = document.getElementById('gate-pass').value;
+  const err   = document.getElementById('gate-error');
+  err.textContent = '';
+  if (!email || pass.length < 6) { err.textContent = 'E-Mail und mind. 6-stelliges Passwort eingeben.'; return; }
+  const { error } = await supa.auth.signUp({ email, password: pass });
+  if (error) { err.textContent = error.message; }
+  else {
+    err.style.color = '#34d399';
+    err.textContent = '✓ Bestätigungs-E-Mail gesendet – bitte prüfen!';
   }
 }
 
@@ -1551,37 +1569,27 @@ async function generateAIIsland() {
   const level = document.getElementById('ai-island-level').value;
   const tts   = document.getElementById('ai-island-tts').value;
   const topic = document.getElementById('ai-island-topic').value.trim();
-  const key   = localStorage.getItem('hl_openai_key');
 
   if (!name)  { document.getElementById('ai-island-name').focus();  return; }
   if (!lang)  { document.getElementById('ai-island-lang').focus();  return; }
   if (!topic) { document.getElementById('ai-island-topic').focus(); return; }
-  if (!key)   { alert('Bitte zuerst deinen OpenAI API-Key in den Einstellungen hinterlegen.'); return; }
 
   document.getElementById('ai-island-btn').disabled = true;
   document.getElementById('ai-island-status').classList.remove('hidden');
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content:
-            'Du bist ein professioneller Sprachlehrer. Erstelle exakt 50 Sätze zum Lernen von ' + lang +
-            ' auf Niveau ' + level + '. Thema: ' + topic + '. ' +
-            'Gib ein JSON-Objekt zurück: { "sentences": [ { "target": "Satz in ' + lang + '", "native": "Deutsche Übersetzung", "notes": "Kontext oder Verwendungshinweis" }, ... ] }. ' +
-            'Nur JSON, kein Text davor oder danach. Genau 50 Einträge.'
-          },
-          { role: 'user', content: 'Generiere die 50 Sätze jetzt.' }
-        ],
-        temperature: 0.7
-      })
+    const data = await callProxy('gpt-generate', {
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content:
+          'Du bist ein professioneller Sprachlehrer. Erstelle exakt 50 Sätze zum Lernen von ' + lang +
+          ' auf Niveau ' + level + '. Thema: ' + topic + '. ' +
+          'Gib ein JSON-Objekt zurück: { "sentences": [ { "target": "Satz in ' + lang + '", "native": "Deutsche Übersetzung", "notes": "Kontext oder Verwendungshinweis" }, ... ] }. ' +
+          'Nur JSON, kein Text davor oder danach. Genau 50 Einträge.'
+        },
+        { role: 'user', content: 'Generiere die 50 Sätze jetzt.' }
+      ]
     });
-    if (!res.ok) throw new Error('API-Fehler ' + res.status);
-    const data = await res.json();
     const parsed = JSON.parse(data.choices[0].message.content);
     const sentences = parsed.sentences;
     if (!Array.isArray(sentences) || !sentences.length) throw new Error('Keine Sätze erhalten.');
@@ -1696,34 +1704,20 @@ function ttsPlay(islandId, sentId) {
 
 // ── Azure Pronunciation Assessment ────────────────────────────
 async function azurePronounce(blob, lang, referenceText) {
-  const key    = localStorage.getItem('hl_azure_key');
-  const region = localStorage.getItem('hl_azure_region') || 'westeurope';
-  if (!key) return null;
   try {
-    const configJSON = JSON.stringify({
-      ReferenceText: referenceText,
-      GradingSystem: 'HundredMark',
-      Granularity: 'Word',
-      EnableMiscue: true
+    const buf  = await blob.arrayBuffer();
+    const b64  = btoa(String.fromCharCode(...new Uint8Array(buf)));
+    const data = await callProxy('azure', {
+      audioBase64: b64,
+      mimeType: blob.type || 'audio/webm',
+      language: lang,
+      referenceText
     });
-    const config      = btoa(unescape(encodeURIComponent(configJSON)));
-    const language    = lang.includes('-') ? lang : lang + '-US';
-    const contentType = (blob.type && blob.type !== '') ? blob.type : 'audio/webm;codecs=opus';
-    const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${language}&format=detailed`;
-    const res  = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Ocp-Apim-Subscription-Key': key,
-        'Content-Type': contentType,
-        'Pronunciation-Assessment': config
-      },
-      body: blob
-    });
-    const data = await res.json().catch(() => null);
     if (!data?.NBest?.[0]?.Words) return null;
     return buildAzureHTML(data.NBest[0].Words, data.NBest[0].PronunciationAssessment?.PronScore);
   } catch(e) {
-    console.warn('Azure Pronunciation fallback:', e.message);
+    if (e.message !== 'not_logged_in' && e.message !== 'credits_exhausted')
+      console.warn('Azure Pronunciation:', e.message);
     return null;
   }
 }
@@ -1750,19 +1744,11 @@ async function getIPA(sentence, lang) {
   const cacheKey = 'hl_ipa_' + sentence;
   const cached = localStorage.getItem(cacheKey);
   if (cached !== null) return cached;
-  const apiKey = localStorage.getItem('hl_openai_key');
-  if (!apiKey) return '';
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: `Give only the IPA phonetic transcription for this sentence in ${lang}. Reply with only the IPA surrounded by forward slashes, nothing else: "${sentence}"` }],
-        max_tokens: 120
-      })
+    const data = await callProxy('gpt-ipa', {
+      messages: [{ role: 'user', content: `Give only the IPA phonetic transcription for this sentence in ${lang}. Reply with only the IPA surrounded by forward slashes, nothing else: "${sentence}"` }]
     });
-    const ipa = (await res.json()).choices?.[0]?.message?.content?.trim() || '';
+    const ipa = data.choices?.[0]?.message?.content?.trim() || '';
     localStorage.setItem(cacheKey, ipa);
     return ipa;
   } catch { return ''; }
@@ -1830,31 +1816,24 @@ function stopTTS() {
 }
 
 async function ttsSpeak(text, rate = 1) {
-  const key = localStorage.getItem('hl_openai_key');
-  if (!key) { alert('Bitte zuerst den OpenAI API Key in den Einstellungen eintragen.'); return; }
   if (ttsPlaying) { stopTTS(); return; }
-
   const voice = document.getElementById('voice-sel')?.value || 'nova';
   ttsPlaying = true;
   document.getElementById('icon-play').classList.add('hidden');
   document.getElementById('icon-stop').classList.remove('hidden');
   document.getElementById('waveform').classList.remove('hidden');
-
   try {
-    const res = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'tts-1', input: text, voice, speed: rate })
-    });
-    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'API-Fehler'); }
-    const url = URL.createObjectURL(await res.blob());
+    const data  = await callProxy('tts', { text, voice, speed: rate });
+    const bytes = Uint8Array.from(atob(data.audio), c => c.charCodeAt(0));
+    const url   = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
     currentAudio = new Audio(url);
     currentAudio.onended = () => { URL.revokeObjectURL(url); stopTTS(); };
     currentAudio.onerror = stopTTS;
     await currentAudio.play();
   } catch(e) {
     stopTTS();
-    alert('TTS Fehler: ' + e.message);
+    if (e.message !== 'not_logged_in' && e.message !== 'credits_exhausted')
+      alert('TTS Fehler: ' + e.message);
   }
 }
 
@@ -1868,23 +1847,17 @@ function playShadowTTS() {
 }
 
 // ── Whisper + Word-Diff ───────────────────────────────────────
-let mediaRecorder = null, audioChunks = [], azureRecognizer = null;
+let mediaRecorder = null, audioChunks = [];
 
-async function whisperTranscribe(blob, lang, prompt = '') {
-  const key = localStorage.getItem('hl_openai_key');
-  if (!key) { alert('OpenAI API Key fehlt.'); return null; }
-  const form = new FormData();
-  form.append('file', blob, 'rec.webm');
-  form.append('model', 'whisper-1');
-  form.append('language', lang.split('-')[0]);
-  if (prompt) form.append('prompt', prompt);
-  const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + key },
-    body: form
+async function whisperTranscribe(blob, lang) {
+  const buf = await blob.arrayBuffer();
+  const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+  const data = await callProxy('whisper', {
+    audioBase64: b64,
+    mimeType: blob.type || 'audio/webm',
+    language: lang.split('-')[0]
   });
-  if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'Whisper-Fehler'); }
-  return (await res.json()).text || '';
+  return data.text || '';
 }
 
 function wordDiffHTML(transcript, target) {
@@ -1918,76 +1891,38 @@ let recActive = false;
 
 async function toggleRec() {
   if (recActive) { if (mediaRecorder?.state !== 'inactive') mediaRecorder.stop(); return; }
-  if (azureRecognizer) return;
 
   const island = DB.islands().find(i => i.id === shadow.islandId);
   const lang   = island?.ttsLang || 'en-US';
   const target = shadow.sentences[shadow.idx].target;
-  const SDK    = window.SpeechSDK;
-  const azKey  = localStorage.getItem('hl_azure_key');
 
   const uiOn  = () => { document.getElementById('rec-dot').classList.add('animate-pulse'); document.getElementById('rec-label').textContent='Aufnahme läuft…'; document.getElementById('btn-record').style.borderColor='#f87171'; };
   const uiOff = (lbl='Aufnehmen') => { document.getElementById('rec-dot').classList.remove('animate-pulse'); document.getElementById('rec-label').textContent=lbl; document.getElementById('btn-record').style.borderColor=''; };
 
-  if (azKey && SDK) {
-    uiOn();
-    try {
-      const region = localStorage.getItem('hl_azure_region') || 'westeurope';
-      const language = lang.includes('-') ? lang : lang + '-US';
-      const speechCfg = SDK.SpeechConfig.fromSubscription(azKey, region);
-      speechCfg.speechRecognitionLanguage = language;
-      const assessCfg = new SDK.PronunciationAssessmentConfig(
-        target,
-        SDK.PronunciationAssessmentGradingSystem.HundredMark,
-        SDK.PronunciationAssessmentGranularity.Word,
-        true
-      );
-      const audioCfg  = SDK.AudioConfig.fromDefaultMicrophoneInput();
-      const recognizer = new SDK.SpeechRecognizer(speechCfg, audioCfg);
-      assessCfg.applyTo(recognizer);
-      azureRecognizer = recognizer;
-      recognizer.recognizeOnceAsync(result => {
-        azureRecognizer = null; recognizer.close();
-        uiOff('Analysiere…');
-        try {
-          const jsonStr = result.properties.getProperty(SDK.PropertyId.SpeechServiceResponse_JsonResult);
-          const data    = jsonStr ? JSON.parse(jsonStr) : null;
-          const words   = data?.NBest?.[0]?.Words;
-          const pScore  = data?.NBest?.[0]?.PronunciationAssessment?.PronScore;
-          if (words?.length) { const r = buildAzureHTML(words, pScore); showPronResult(r.html, r.score); }
-          else { document.getElementById('pron-result').classList.remove('hidden'); document.getElementById('pron-text').textContent = 'Kein Sprache erkannt – nochmal versuchen'; document.getElementById('pron-score').textContent = ''; }
-        } catch(e) { console.warn('Azure parse:', e); }
-        finally { uiOff(); }
-      }, err => { azureRecognizer = null; recognizer.close(); uiOff(); console.warn('Azure:', err); });
-    } catch(e) {
-      uiOff();
-      if (e.name === 'NotAllowedError') alert('Mikrofon-Zugriff verweigert.');
-      else console.warn('Azure setup:', e);
-    }
-
-  } else {
-    const oaiKey = localStorage.getItem('hl_openai_key');
-    if (!oaiKey) { alert('Bitte OpenAI API Key in den Einstellungen eintragen.'); return; }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioChunks  = [];
-      mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
-      mediaRecorder.onstart = () => { recActive = true; uiOn(); };
-      mediaRecorder.onstop = async () => {
-        recActive = false; stream.getTracks().forEach(t => t.stop()); uiOff('Analysiere…');
-        try {
-          const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks   = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstart = () => { recActive = true; uiOn(); };
+    mediaRecorder.onstop  = async () => {
+      recActive = false; stream.getTracks().forEach(t => t.stop()); uiOff('Analysiere…');
+      try {
+        const blob   = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+        const result = await azurePronounce(blob, lang, target);
+        if (result) { showPronResult(result.html, result.score); }
+        else {
           const transcript = await whisperTranscribe(blob, lang);
           if (transcript) { const r = wordDiffHTML(transcript, target); showPronResult(r.html, r.score); }
-        } catch(e) { alert('Fehler: ' + e.message); }
-        finally { uiOff(); }
-      };
-      mediaRecorder.start();
-    } catch(e) {
-      if (e.name === 'NotAllowedError') alert('Mikrofon-Zugriff verweigert.');
-      else alert('Aufnahme-Fehler: ' + e.message);
-    }
+        }
+      } catch(e) {
+        if (e.message !== 'not_logged_in' && e.message !== 'credits_exhausted') alert('Fehler: ' + e.message);
+      } finally { uiOff(); }
+    };
+    mediaRecorder.start();
+  } catch(e) {
+    if (e.name === 'NotAllowedError') alert('Mikrofon-Zugriff verweigert.');
+    else alert('Aufnahme-Fehler: ' + e.message);
   }
 }
 
@@ -2185,76 +2120,37 @@ let srsRecActive = false;
 
 async function startSRSSpeech() {
   if (srsRecActive) { if (mediaRecorder?.state !== 'inactive') mediaRecorder.stop(); return; }
-  if (azureRecognizer) return;
 
   const { island, sent } = srsQ.current;
   const lang = island.ttsLang || 'en-US';
-  const SDK  = window.SpeechSDK;
-  const azKey = localStorage.getItem('hl_azure_key');
 
   const uiOn  = () => { document.getElementById('srs-mic-label').textContent='Aufnahme läuft…'; document.getElementById('srs-mic-btn').classList.add('animate-pulse'); document.getElementById('srs-reveal-btn').classList.add('hidden'); };
   const uiOff = (lbl='Jetzt sprechen') => { document.getElementById('srs-mic-btn').classList.remove('animate-pulse'); document.getElementById('srs-mic-label').textContent=lbl; document.getElementById('srs-reveal-btn').classList.remove('hidden'); };
 
-  if (azKey && SDK) {
-    uiOn();
-    try {
-      const region   = localStorage.getItem('hl_azure_region') || 'westeurope';
-      const language = lang.includes('-') ? lang : lang + '-US';
-      const speechCfg = SDK.SpeechConfig.fromSubscription(azKey, region);
-      speechCfg.speechRecognitionLanguage = language;
-      const assessCfg = new SDK.PronunciationAssessmentConfig(
-        sent.target,
-        SDK.PronunciationAssessmentGradingSystem.HundredMark,
-        SDK.PronunciationAssessmentGranularity.Word,
-        true
-      );
-      const audioCfg   = SDK.AudioConfig.fromDefaultMicrophoneInput();
-      const recognizer = new SDK.SpeechRecognizer(speechCfg, audioCfg);
-      assessCfg.applyTo(recognizer);
-      azureRecognizer  = recognizer;
-      recognizer.recognizeOnceAsync(result => {
-        azureRecognizer = null; recognizer.close();
-        uiOff('Analysiere…');
-        try {
-          const jsonStr = result.properties.getProperty(SDK.PropertyId.SpeechServiceResponse_JsonResult);
-          const data    = jsonStr ? JSON.parse(jsonStr) : null;
-          const words   = data?.NBest?.[0]?.Words;
-          const pScore  = data?.NBest?.[0]?.PronunciationAssessment?.PronScore;
-          if (words?.length) { const r = buildAzureHTML(words, pScore); showSRSSpeechResult(r.html, r.score); }
-          else skipSRSSpeech();
-        } catch(e) { skipSRSSpeech(); }
-        finally { uiOff(); }
-      }, err => { azureRecognizer = null; recognizer.close(); uiOff(); skipSRSSpeech(); });
-    } catch(e) {
-      uiOff();
-      if (e.name !== 'NotAllowedError') skipSRSSpeech();
-      else alert('Mikrofon-Zugriff verweigert.');
-    }
-
-  } else {
-    const oaiKey = localStorage.getItem('hl_openai_key');
-    if (!oaiKey) { skipSRSSpeech(); return; }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioChunks  = [];
-      mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
-      mediaRecorder.onstart = () => { srsRecActive = true; uiOn(); };
-      mediaRecorder.onstop = async () => {
-        srsRecActive = false; stream.getTracks().forEach(t => t.stop()); uiOff('Analysiere…');
-        try {
-          const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks   = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstart = () => { srsRecActive = true; uiOn(); };
+    mediaRecorder.onstop  = async () => {
+      srsRecActive = false; stream.getTracks().forEach(t => t.stop()); uiOff('Analysiere…');
+      try {
+        const blob   = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+        const result = await azurePronounce(blob, lang, sent.target);
+        if (result) { showSRSSpeechResult(result.html, result.score); }
+        else {
           const transcript = await whisperTranscribe(blob, lang);
           if (transcript) { const r = wordDiffHTML(transcript, sent.target); showSRSSpeechResult(r.html, r.score); }
           else skipSRSSpeech();
-        } catch(e) { skipSRSSpeech(); }
-        finally { uiOff(); }
-      };
-      mediaRecorder.start();
-    } catch(e) {
-      if (e.name === 'NotAllowedError') alert('Mikrofon-Zugriff verweigert.');
-      skipSRSSpeech();
-    }
+        }
+      } catch(e) { skipSRSSpeech(); }
+      finally { uiOff(); }
+    };
+    mediaRecorder.start();
+  } catch(e) {
+    if (e.name === 'NotAllowedError') alert('Mikrofon-Zugriff verweigert.');
+    else skipSRSSpeech();
   }
 }
 
@@ -2308,26 +2204,20 @@ function flipSRSCard() {
 
   // Auto-play TTS of the TARGET sentence
   const { island, sent } = srsQ.current;
-  const key = localStorage.getItem('hl_openai_key');
   const showRating = () => {
     document.getElementById('srs-tts-indicator').classList.add('hidden');
     document.getElementById('srs-rating-btns').classList.remove('hidden');
   };
-
-  if (!key) { showRating(); return; }
-
   const voice = document.getElementById('srs-voice-sel')?.value || 'nova';
-  fetch('https://api.openai.com/v1/audio/speech', {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'tts-1', input: sent.target, voice })
-  }).then(r => r.blob()).then(blob => {
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    audio.onended = () => { URL.revokeObjectURL(url); showRating(); };
-    audio.onerror = showRating;
-    audio.play();
-  }).catch(showRating);
+  callProxy('tts', { text: sent.target, voice, speed: 1 })
+    .then(data => {
+      const bytes = Uint8Array.from(atob(data.audio), c => c.charCodeAt(0));
+      const url   = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
+      const audio = new Audio(url);
+      audio.onended = () => { URL.revokeObjectURL(url); showRating(); };
+      audio.onerror = showRating;
+      audio.play();
+    }).catch(showRating);
 }
 
 function rateSRS(rating) {
@@ -2447,28 +2337,10 @@ async function importLibraryIsland(file, name) {
   }
 }
 
-function saveOnboardingKey() {
-  const k = document.getElementById('onboarding-key').value.trim();
-  if (!k) { alert('Bitte den API Key eintragen.'); return; }
-  localStorage.setItem('hl_openai_key', k);
-  document.getElementById('modal-onboarding').classList.add('hidden');
-}
-
-function skipOnboarding() {
-  document.getElementById('modal-onboarding').classList.add('hidden');
-}
 
 function saveSettings() {
   const n = Math.max(1, Math.min(100, parseInt(document.getElementById('set-new-per-day').value)||20));
   DB.setSettings({ newPerDay:n });
-  const k = document.getElementById('set-openai-key').value.trim();
-  if (k) localStorage.setItem('hl_openai_key', k);
-  else localStorage.removeItem('hl_openai_key');
-  const ak = document.getElementById('set-azure-key').value.trim();
-  if (ak) localStorage.setItem('hl_azure_key', ak);
-  else localStorage.removeItem('hl_azure_key');
-  const ar = document.getElementById('set-azure-region').value.trim();
-  localStorage.setItem('hl_azure_region', ar || 'westeurope');
   closeModal('modal-settings');
 }
 
@@ -2507,13 +2379,7 @@ function clearData() {
 function openModal(id) {
   document.getElementById(id).classList.remove('hidden');
   if (id === 'modal-settings') {
-    const s = DB.settings();
-    document.getElementById('set-new-per-day').value = s.newPerDay || 20;
-    const k = localStorage.getItem('hl_openai_key') || '';
-    document.getElementById('set-openai-key').value = k ? '••••••••••••' : '';
-    const ak = localStorage.getItem('hl_azure_key') || '';
-    document.getElementById('set-azure-key').value = ak ? '••••••••••••' : '';
-    document.getElementById('set-azure-region').value = localStorage.getItem('hl_azure_region') || 'westeurope';
+    document.getElementById('set-new-per-day').value = DB.settings().newPerDay || 20;
   }
 }
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
@@ -2543,9 +2409,6 @@ document.addEventListener('keydown', e => {
 (function init() {
   renderDashboard();
   initAuth();
-  if (!localStorage.getItem('hl_openai_key')) {
-    document.getElementById('modal-onboarding').classList.remove('hidden');
-  }
 })();
 
 // ── Dialogue ──────────────────────────────────────────────────
@@ -2568,15 +2431,8 @@ function dlgSelectIsland() {
 }
 
 async function gptChat(messages) {
-  const key = localStorage.getItem('hl_openai_key');
-  if (!key) throw new Error('OpenAI API Key fehlt');
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'gpt-4o-mini', messages, max_tokens: 120, temperature: 0.8 })
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message);
+  const data = await callProxy('gpt-dialogue', { messages });
+  if (data.error) throw new Error(data.error.message || data.error);
   return data.choices?.[0]?.message?.content?.trim() || '';
 }
 
