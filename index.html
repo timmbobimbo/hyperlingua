@@ -1730,9 +1730,12 @@ async function blobToWav(blob) {
 // ── Azure Pronunciation Assessment ────────────────────────────
 async function azurePronounce(blob, lang, referenceText) {
   try {
-    const wav  = await blobToWav(blob);
-    const buf  = await wav.arrayBuffer();
-    const b64  = btoa(String.fromCharCode(...new Uint8Array(buf)));
+    const wav   = await blobToWav(blob);
+    const buf   = await wav.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary  = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    const b64   = btoa(binary);
     const data = await callProxy('azure', {
       audioBase64: b64,
       mimeType: 'audio/wav',
@@ -1882,8 +1885,11 @@ function playShadowTTS() {
 let mediaRecorder = null, audioChunks = [];
 
 async function whisperTranscribe(blob, lang) {
-  const buf = await blob.arrayBuffer();
-  const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+  const buf   = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let binary  = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  const b64   = btoa(binary);
   const data = await callProxy('whisper', {
     audioBase64: b64,
     mimeType: blob.type || 'audio/webm',
