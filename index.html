@@ -656,6 +656,52 @@
   </div>
 </div>
 
+<!-- ══════════════════════ DIALOGUE ══════════════════════ -->
+<div id="view-dialogue" class="hidden fade-up">
+  <h2 class="text-2xl font-bold mb-1">Dialogue</h2>
+  <p class="text-sm text-gray-500 mb-6">Freies Gespräch — wende dein Wissen im Kontext an</p>
+
+  <div class="rounded-2xl border border-gray-800 p-5 mb-4" style="background:#111117">
+    <label class="block text-xs text-gray-500 uppercase tracking-widest mb-2">Island</label>
+    <select id="dlg-island-sel" onchange="dlgSelectIsland()"
+            class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-sm
+                   text-gray-200 focus:outline-none focus:border-indigo-500">
+      <option value="">Wähle eine Insel…</option>
+    </select>
+  </div>
+
+  <div id="dlg-start-area" class="hidden text-center py-8">
+    <div class="text-4xl mb-3">💬</div>
+    <p class="text-sm text-gray-500 mb-5">KI erstellt ein passendes Szenario aus deiner Island und führt ein echtes Gespräch mit dir.</p>
+    <button onclick="startDialogue()"
+            class="px-8 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                   text-white font-medium transition-colors">Gespräch starten</button>
+  </div>
+
+  <div id="dlg-chat-area" class="hidden space-y-4">
+    <div id="dlg-scenario" class="text-xs text-indigo-300/70 px-4 py-2.5 rounded-xl
+                                   border border-indigo-500/20 bg-indigo-500/5 leading-relaxed"></div>
+
+    <div id="dlg-messages" class="space-y-3 max-h-[50vh] overflow-y-auto pr-1"></div>
+
+    <div id="dlg-user-turn" class="hidden flex flex-col items-center gap-2 pt-2">
+      <button id="dlg-mic-btn" onclick="toggleDlgMic()"
+              class="flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-indigo-500
+                     bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 font-medium
+                     text-sm transition-colors">
+        <span id="dlg-mic-dot" class="w-2 h-2 rounded-full bg-indigo-400"></span>
+        <span id="dlg-mic-label">Antworten</span>
+      </button>
+    </div>
+
+    <div id="dlg-thinking" class="hidden text-center text-xs text-gray-600 py-2">KI denkt…</div>
+
+    <button onclick="endDialogue()"
+            class="w-full py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700
+                   text-gray-500 text-sm transition-colors mt-2">Gespräch beenden</button>
+  </div>
+</div>
+
 </main>
 
 <!-- ══════════════════════ MODALS ══════════════════════ -->
@@ -946,52 +992,6 @@
               class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500
                      text-white text-sm font-medium transition-colors">Speichern & loslegen</button>
     </div>
-  </div>
-</div>
-
-<!-- ══════════════════════ DIALOGUE ══════════════════════ -->
-<div id="view-dialogue" class="hidden fade-up">
-  <h2 class="text-2xl font-bold mb-1">Dialogue</h2>
-  <p class="text-sm text-gray-500 mb-6">Freies Gespräch — wende dein Wissen im Kontext an</p>
-
-  <div class="rounded-2xl border border-gray-800 p-5 mb-4" style="background:#111117">
-    <label class="block text-xs text-gray-500 uppercase tracking-widest mb-2">Island</label>
-    <select id="dlg-island-sel" onchange="dlgSelectIsland()"
-            class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-sm
-                   text-gray-200 focus:outline-none focus:border-indigo-500">
-      <option value="">Wähle eine Insel…</option>
-    </select>
-  </div>
-
-  <div id="dlg-start-area" class="hidden text-center py-8">
-    <div class="text-4xl mb-3">💬</div>
-    <p class="text-sm text-gray-500 mb-5">KI erstellt ein passendes Szenario aus deiner Island und führt ein echtes Gespräch mit dir.</p>
-    <button onclick="startDialogue()"
-            class="px-8 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500
-                   text-white font-medium transition-colors">Gespräch starten</button>
-  </div>
-
-  <div id="dlg-chat-area" class="hidden space-y-4">
-    <div id="dlg-scenario" class="text-xs text-indigo-300/70 px-4 py-2.5 rounded-xl
-                                   border border-indigo-500/20 bg-indigo-500/5 leading-relaxed"></div>
-
-    <div id="dlg-messages" class="space-y-3 max-h-[50vh] overflow-y-auto pr-1"></div>
-
-    <div id="dlg-user-turn" class="hidden flex flex-col items-center gap-2 pt-2">
-      <button id="dlg-mic-btn" onclick="toggleDlgMic()"
-              class="flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-indigo-500
-                     bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 font-medium
-                     text-sm transition-colors">
-        <span id="dlg-mic-dot" class="w-2 h-2 rounded-full bg-indigo-400"></span>
-        <span id="dlg-mic-label">Antworten</span>
-      </button>
-    </div>
-
-    <div id="dlg-thinking" class="hidden text-center text-xs text-gray-600 py-2">KI denkt…</div>
-
-    <button onclick="endDialogue()"
-            class="w-full py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700
-                   text-gray-500 text-sm transition-colors mt-2">Gespräch beenden</button>
   </div>
 </div>
 
