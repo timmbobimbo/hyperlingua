@@ -845,6 +845,58 @@
   </div>
 </div>
 
+<!-- Onboarding Modal -->
+<div id="modal-onboarding" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/70" style="backdrop-filter:blur(4px)"></div>
+  <div class="relative w-full max-w-md rounded-2xl border border-gray-700 p-6 fade-up" style="background:#16161e">
+    <div class="text-2xl mb-1">👋 Willkommen bei HyperLingua</div>
+    <p class="text-sm text-gray-400 mb-5">Für die Sprachausgabe brauchst du einen kostenlosen OpenAI API Key. Einmalig einrichten — dauert 5 Minuten.</p>
+
+    <div class="space-y-3 mb-5">
+      <div class="flex gap-3 items-start">
+        <span class="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
+        <div>
+          <p class="text-sm text-gray-200 font-medium">OpenAI Account erstellen</p>
+          <p class="text-xs text-gray-500">Geh auf <span class="text-indigo-400">platform.openai.com</span> und registriere dich</p>
+        </div>
+      </div>
+      <div class="flex gap-3 items-start">
+        <span class="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
+        <div>
+          <p class="text-sm text-gray-200 font-medium">$5 Guthaben aufladen</p>
+          <p class="text-xs text-gray-500">Billing → Add to credit balance → $5 (reicht für tausende Sätze)</p>
+        </div>
+      </div>
+      <div class="flex gap-3 items-start">
+        <span class="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
+        <div>
+          <p class="text-sm text-gray-200 font-medium">API Key erstellen</p>
+          <p class="text-xs text-gray-500">API keys → Create new secret key → Key kopieren</p>
+        </div>
+      </div>
+      <div class="flex gap-3 items-start">
+        <span class="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center flex-shrink-0 mt-0.5">4</span>
+        <div class="w-full">
+          <p class="text-sm text-gray-200 font-medium mb-1.5">Key hier eintragen</p>
+          <input id="onboarding-key" type="password" placeholder="sk-proj-..."
+                 class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
+                        focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b">
+          <p class="text-xs text-gray-600 mt-1">Wird nur lokal auf deinem Gerät gespeichert</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex gap-3">
+      <button onclick="skipOnboarding()"
+              class="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700
+                     text-gray-400 text-sm font-medium transition-colors">Später</button>
+      <button onclick="saveOnboardingKey()"
+              class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                     text-white text-sm font-medium transition-colors">Speichern & loslegen</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════ JAVASCRIPT ══════════════════════ -->
 <script>
 // ── helpers ───────────────────────────────────────────────────
@@ -1799,6 +1851,17 @@ function finishSRS() {
 function endSRS() { initSRSSetup(); }
 
 // ── settings ──────────────────────────────────────────────────
+function saveOnboardingKey() {
+  const k = document.getElementById('onboarding-key').value.trim();
+  if (!k) { alert('Bitte den API Key eintragen.'); return; }
+  localStorage.setItem('hl_openai_key', k);
+  document.getElementById('modal-onboarding').classList.add('hidden');
+}
+
+function skipOnboarding() {
+  document.getElementById('modal-onboarding').classList.add('hidden');
+}
+
 function saveSettings() {
   const n = Math.max(1, Math.min(100, parseInt(document.getElementById('set-new-per-day').value)||20));
   DB.setSettings({ newPerDay:n });
@@ -1892,6 +1955,9 @@ function maybeAddSample() {
   maybeAddSample();
   renderDashboard();
   initAuth();
+  if (!localStorage.getItem('hl_openai_key')) {
+    document.getElementById('modal-onboarding').classList.remove('hidden');
+  }
 })();
 </script>
 </body>
