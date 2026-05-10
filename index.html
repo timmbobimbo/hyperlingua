@@ -1435,7 +1435,8 @@ function buildAzureHTML(words, pronScore) {
     const pa  = w.PronunciationAssessment || {};
     const err = pa.ErrorType || 'None';
     const acc = pa.AccuracyScore ?? 100;
-    if (err === 'Omission') return `<span class="text-gray-600 line-through opacity-50">${w.Word}</span>`;
+    if (err === 'Omission')  return `<span class="text-gray-600 line-through opacity-50">${w.Word}</span>`;
+    if (err === 'Insertion') return `<span class="text-orange-400 opacity-70"><em>${w.Word}</em></span>`;
     total++; scoreSum += acc;
     if (acc >= 80) return `<span class="text-emerald-400 font-medium">${w.Word}</span>`;
     if (acc >= 50) return `<span class="text-amber-400">${w.Word}</span>`;
@@ -1651,10 +1652,12 @@ async function toggleRec() {
         uiOff('Analysiere…');
         try {
           const jsonStr = result.properties.getProperty(SDK.PropertyId.SpeechServiceResponse_JsonResult);
+          console.log('Azure reason:', result.reason, 'JSON:', jsonStr);
           const data    = jsonStr ? JSON.parse(jsonStr) : null;
           const words   = data?.NBest?.[0]?.Words;
           const pScore  = data?.NBest?.[0]?.PronunciationAssessment?.PronScore;
           if (words?.length) { const r = buildAzureHTML(words, pScore); showPronResult(r.html, r.score); }
+          else { document.getElementById('pron-result').classList.remove('hidden'); document.getElementById('pron-text').textContent = 'Kein Sprache erkannt – nochmal versuchen'; document.getElementById('pron-score').textContent = ''; }
         } catch(e) { console.warn('Azure parse:', e); }
         finally { uiOff(); }
       }, err => { azureRecognizer = null; recognizer.close(); uiOff(); console.warn('Azure:', err); });
