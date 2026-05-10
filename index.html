@@ -266,6 +266,15 @@
         </svg>
         Bibliothek
       </button>
+      <button onclick="openAIIsland()"
+              class="flex items-center gap-1.5 bg-violet-700 hover:bg-violet-600
+                     text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+        </svg>
+        KI-Island
+      </button>
       <button onclick="openAddIsland()"
               class="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500
                      text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors">
@@ -772,6 +781,95 @@
       <button onclick="saveIsland()"
               class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500
                      text-white text-sm font-medium transition-colors">Erstellen</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI Island Generator -->
+<div id="modal-ai-island" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/60" style="backdrop-filter:blur(4px)"
+       onclick="closeModal('modal-ai-island')"></div>
+  <div class="relative w-full max-w-md rounded-2xl border border-gray-700 p-6 fade-up"
+       style="background:#16161e">
+    <h3 class="text-lg font-semibold mb-1">KI-Island generieren ✨</h3>
+    <p class="text-xs text-gray-500 mb-4">GPT erstellt 50 Sätze passend zu deinem Thema und Niveau.</p>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">Island-Name</label>
+        <input id="ai-island-name" type="text" placeholder="z.B. Small Talk im Büro"
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600
+                      border border-gray-700 focus:border-indigo-500 focus:outline-none"
+               style="background:#1f1f2b">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1.5">Sprache</label>
+          <input id="ai-island-lang" type="text" placeholder="z.B. Englisch"
+                 class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600
+                        border border-gray-700 focus:border-indigo-500 focus:outline-none"
+                 style="background:#1f1f2b">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1.5">Niveau</label>
+          <select id="ai-island-level"
+                  class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200
+                         border border-gray-700 focus:border-indigo-500 focus:outline-none"
+                  style="background:#1f1f2b">
+            <option value="A2">A2</option>
+            <option value="B1" selected>B1</option>
+            <option value="B2">B2</option>
+            <option value="C1">C1</option>
+            <option value="C2">C2</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">TTS-Sprache</label>
+        <select id="ai-island-tts"
+                class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200
+                       border border-gray-700 focus:border-indigo-500 focus:outline-none"
+                style="background:#1f1f2b">
+          <option value="en-US">Englisch (US)</option>
+          <option value="en-GB">Englisch (UK)</option>
+          <option value="es-ES">Spanisch (Spanien)</option>
+          <option value="es-MX">Spanisch (Mexiko)</option>
+          <option value="fr-FR">Französisch</option>
+          <option value="it-IT">Italienisch</option>
+          <option value="pt-BR">Portugiesisch (Brasilien)</option>
+          <option value="pt-PT">Portugiesisch (Portugal)</option>
+          <option value="de-DE">Deutsch</option>
+          <option value="ja-JP">Japanisch</option>
+          <option value="ko-KR">Koreanisch</option>
+          <option value="zh-CN">Chinesisch (Mandarin)</option>
+          <option value="ru-RU">Russisch</option>
+          <option value="ar-SA">Arabisch</option>
+          <option value="nl-NL">Niederländisch</option>
+          <option value="pl-PL">Polnisch</option>
+          <option value="tr-TR">Türkisch</option>
+          <option value="sv-SE">Schwedisch</option>
+          <option value="nb-NO">Norwegisch</option>
+          <option value="da-DK">Dänisch</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">Thema / Beschreibung</label>
+        <textarea id="ai-island-topic" rows="3"
+                  placeholder="z.B. Meetings leiten, Feedback geben, E-Mails schreiben — typische Business-Situationen im Büroalltag."
+                  class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600
+                         border border-gray-700 focus:border-indigo-500 focus:outline-none resize-none"
+                  style="background:#1f1f2b"></textarea>
+      </div>
+    </div>
+    <div id="ai-island-status" class="hidden mt-3 text-xs text-center text-violet-400 py-2">
+      ✨ KI generiert deine Island…
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button onclick="closeModal('modal-ai-island')"
+              class="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700
+                     text-gray-400 text-sm font-medium transition-colors">Abbrechen</button>
+      <button id="ai-island-btn" onclick="generateAIIsland()"
+              class="flex-1 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500
+                     text-white text-sm font-medium transition-colors">Generieren</button>
     </div>
   </div>
 </div>
@@ -1412,6 +1510,85 @@ function renderSentences(island) {
 }
 
 function openAddIsland() { openModal('modal-island'); setTimeout(()=>document.getElementById('in-island-name').focus(),60); }
+
+function openAIIsland() {
+  document.getElementById('ai-island-name').value  = '';
+  document.getElementById('ai-island-lang').value  = '';
+  document.getElementById('ai-island-topic').value = '';
+  document.getElementById('ai-island-level').value = 'B1';
+  document.getElementById('ai-island-tts').value   = 'en-US';
+  document.getElementById('ai-island-status').classList.add('hidden');
+  document.getElementById('ai-island-btn').disabled = false;
+  openModal('modal-ai-island');
+  setTimeout(()=>document.getElementById('ai-island-name').focus(), 60);
+}
+
+async function generateAIIsland() {
+  const name  = document.getElementById('ai-island-name').value.trim();
+  const lang  = document.getElementById('ai-island-lang').value.trim();
+  const level = document.getElementById('ai-island-level').value;
+  const tts   = document.getElementById('ai-island-tts').value;
+  const topic = document.getElementById('ai-island-topic').value.trim();
+  const key   = localStorage.getItem('hl_openai_key');
+
+  if (!name)  { document.getElementById('ai-island-name').focus();  return; }
+  if (!lang)  { document.getElementById('ai-island-lang').focus();  return; }
+  if (!topic) { document.getElementById('ai-island-topic').focus(); return; }
+  if (!key)   { alert('Bitte zuerst deinen OpenAI API-Key in den Einstellungen hinterlegen.'); return; }
+
+  document.getElementById('ai-island-btn').disabled = true;
+  document.getElementById('ai-island-status').classList.remove('hidden');
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content:
+            'Du bist ein professioneller Sprachlehrer. Erstelle exakt 50 Sätze zum Lernen von ' + lang +
+            ' auf Niveau ' + level + '. Thema: ' + topic + '. ' +
+            'Gib ein JSON-Objekt zurück: { "sentences": [ { "target": "Satz in ' + lang + '", "native": "Deutsche Übersetzung", "notes": "Kontext oder Verwendungshinweis" }, ... ] }. ' +
+            'Nur JSON, kein Text davor oder danach. Genau 50 Einträge.'
+          },
+          { role: 'user', content: 'Generiere die 50 Sätze jetzt.' }
+        ],
+        temperature: 0.7
+      })
+    });
+    if (!res.ok) throw new Error('API-Fehler ' + res.status);
+    const data = await res.json();
+    const parsed = JSON.parse(data.choices[0].message.content);
+    const sentences = parsed.sentences;
+    if (!Array.isArray(sentences) || !sentences.length) throw new Error('Keine Sätze erhalten.');
+
+    const now = Date.now();
+    const island = {
+      id: uid(), name, language: lang, ttsLang: tts, createdAt: now,
+      sentences: sentences.map(s => ({
+        id: uid(),
+        target: s.target || '',
+        native: s.native || '',
+        notes:  s.notes  || '',
+        addedAt: now,
+        srs: { ...SRS0 }
+      }))
+    };
+    const islands = DB.islands();
+    islands.push(island);
+    DB.setIslands(islands);
+    closeModal('modal-ai-island');
+    renderIslands();
+    showDetail(island.id);
+  } catch(e) {
+    document.getElementById('ai-island-status').classList.add('hidden');
+    document.getElementById('ai-island-btn').disabled = false;
+    alert('Fehler: ' + e.message);
+  }
+}
+
 function saveIsland() {
   const name = document.getElementById('in-island-name').value.trim();
   const lang = document.getElementById('in-island-lang').value.trim();
@@ -2321,7 +2498,7 @@ function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
 // ── keyboard ──────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
-  if(e.key==='Escape')['modal-island','modal-sentence','modal-settings','modal-auth'].forEach(closeModal);
+  if(e.key==='Escape')['modal-island','modal-ai-island','modal-sentence','modal-settings','modal-auth'].forEach(closeModal);
   if(e.code==='Space'&&!['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)){
     if(currentView==='shadowing'&&shadow.islandId){e.preventDefault();playShadowTTS();}
     if(currentView==='recall'&&document.getElementById('srs-session').offsetParent){
