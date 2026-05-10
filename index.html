@@ -1742,16 +1742,16 @@ async function azurePronounce(blob, lang, referenceText) {
       language: lang,
       referenceText
     });
-    console.log('[Pron] Azure RAW:', JSON.stringify(data).slice(0, 800));
     const words = data?.NBest?.[0]?.Words;
     if (!words?.length) { console.log('[Pron] Azure: keine Wörter → Whisper Fallback'); return null; }
-    console.log('[Pron] Erstes Wort:', JSON.stringify(words[0]));
-    if (!words.some(w => w.PronunciationAssessment?.AccuracyScore != null)) {
+    // REST API returns flat structure: w.AccuracyScore (not w.PronunciationAssessment.AccuracyScore)
+    if (!words.some(w => w.AccuracyScore != null && w.ErrorType != null)) {
       console.log('[Pron] Azure: kein AccuracyScore → Whisper Fallback');
       return null;
     }
-    console.log('[Pron] Azure: Ergebnis OK, Score:', data.NBest[0].PronunciationAssessment?.PronScore);
-    return buildAzureHTML(words, data.NBest[0].PronunciationAssessment?.PronScore);
+    const pronScore = data.NBest[0].PronScore;
+    console.log('[Pron] Azure: Ergebnis OK, Score:', pronScore);
+    return buildAzureHTML(words, pronScore);
   } catch(e) {
     if (e.message !== 'not_logged_in' && e.message !== 'credits_exhausted')
       console.warn('Azure Pronunciation:', e.message);
@@ -1762,9 +1762,9 @@ async function azurePronounce(blob, lang, referenceText) {
 function buildAzureHTML(words, pronScore) {
   let total = 0, scoreSum = 0;
   const spans = words.map(w => {
-    const pa  = w.PronunciationAssessment || {};
-    const err = pa.ErrorType || 'None';
-    const acc = pa.AccuracyScore ?? 0;
+    // REST API: AccuracyScore and ErrorType are directly on the word object
+    const err = w.ErrorType || 'None';
+    const acc = w.AccuracyScore ?? 0;
     if (err === 'Omission')  return `<span class="text-gray-600 line-through opacity-50">${w.Word}</span>`;
     if (err === 'Insertion') return `<span class="text-orange-400 opacity-70"><em>${w.Word}</em></span>`;
     total++; scoreSum += acc;
