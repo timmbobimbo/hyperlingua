@@ -1399,27 +1399,33 @@ async function azurePronounce(blob, lang, referenceText) {
   const key    = localStorage.getItem('hl_azure_key');
   const region = localStorage.getItem('hl_azure_region') || 'westeurope';
   if (!key) return null;
-  const configJSON = JSON.stringify({
-    ReferenceText: referenceText,
-    GradingSystem: 'HundredMark',
-    Granularity: 'Word',
-    EnableMiscue: true
-  });
-  const config = btoa(unescape(encodeURIComponent(configJSON)));
-  const language = lang.includes('-') ? lang : lang + '-US';
-  const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${language}&format=detailed`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Ocp-Apim-Subscription-Key': key,
-      'Content-Type': blob.type || 'audio/webm;codecs=opus',
-      'Pronunciation-Assessment': config
-    },
-    body: blob
-  });
-  const data = await res.json();
-  if (!data.NBest?.[0]?.Words) return null;
-  return buildAzureHTML(data.NBest[0].Words, data.NBest[0].PronunciationAssessment?.PronScore);
+  try {
+    const configJSON = JSON.stringify({
+      ReferenceText: referenceText,
+      GradingSystem: 'HundredMark',
+      Granularity: 'Word',
+      EnableMiscue: true
+    });
+    const config      = btoa(unescape(encodeURIComponent(configJSON)));
+    const language    = lang.includes('-') ? lang : lang + '-US';
+    const contentType = (blob.type && blob.type !== '') ? blob.type : 'audio/webm;codecs=opus';
+    const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${language}&format=detailed`;
+    const res  = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Ocp-Apim-Subscription-Key': key,
+        'Content-Type': contentType,
+        'Pronunciation-Assessment': config
+      },
+      body: blob
+    });
+    const data = await res.json().catch(() => null);
+    if (!data?.NBest?.[0]?.Words) return null;
+    return buildAzureHTML(data.NBest[0].Words, data.NBest[0].PronunciationAssessment?.PronScore);
+  } catch(e) {
+    console.warn('Azure Pronunciation fallback:', e.message);
+    return null;
+  }
 }
 
 function buildAzureHTML(words, pronScore) {
