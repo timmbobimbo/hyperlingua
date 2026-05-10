@@ -1743,15 +1743,9 @@ async function azurePronounce(blob, lang, referenceText) {
       referenceText
     });
     const words = data?.NBest?.[0]?.Words;
-    if (!words?.length) { console.log('[Pron] Azure: keine Wörter → Whisper Fallback'); return null; }
-    // REST API returns flat structure: w.AccuracyScore (not w.PronunciationAssessment.AccuracyScore)
-    if (!words.some(w => w.AccuracyScore != null && w.ErrorType != null)) {
-      console.log('[Pron] Azure: kein AccuracyScore → Whisper Fallback');
-      return null;
-    }
-    const pronScore = data.NBest[0].PronScore;
-    console.log('[Pron] Azure: Ergebnis OK, Score:', pronScore);
-    return buildAzureHTML(words, pronScore);
+    if (!words?.length) return null;
+    if (!words.some(w => w.AccuracyScore != null && w.ErrorType != null)) return null;
+    return buildAzureHTML(words, data.NBest[0].PronScore);
   } catch(e) {
     if (e.message !== 'not_logged_in' && e.message !== 'credits_exhausted')
       console.warn('Azure Pronunciation:', e.message);
