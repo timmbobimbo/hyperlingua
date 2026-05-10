@@ -824,11 +824,21 @@
                style="background:#1f1f2b">
       </div>
       <div>
-        <label class="block text-xs text-gray-500 mb-1.5">OpenAI API Key (für TTS)</label>
+        <label class="block text-xs text-gray-500 mb-1.5">OpenAI API Key (für TTS + Transkription)</label>
         <input id="set-openai-key" type="password" placeholder="sk-proj-..."
                class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
                       focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b">
         <p class="text-xs text-gray-600 mt-1">Wird nur lokal gespeichert, nie auf GitHub oder Server</p>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">Azure Speech Key (für Aussprache-Check)</label>
+        <input id="set-azure-key" type="password" placeholder="Azure Key eintragen…"
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
+                      focus:border-indigo-500 focus:outline-none mb-1.5" style="background:#1f1f2b">
+        <input id="set-azure-region" type="text" placeholder="Region (z.B. westeurope)"
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
+                      focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b">
+        <p class="text-xs text-gray-600 mt-1">Wird nur lokal gespeichert</p>
       </div>
       <div class="pt-3 border-t border-gray-800">
         <p class="text-xs text-gray-600 uppercase tracking-widest mb-3">Daten</p>
@@ -1384,6 +1394,50 @@ function ttsPlay(islandId, sentId) {
   ttsSpeak(sent.target, 1);
 }
 
+// ── Azure Pronunciation Assessment ────────────────────────────
+async function azurePronounce(blob, lang, referenceText) {
+  const key    = localStorage.getItem('hl_azure_key');
+  const region = localStorage.getItem('hl_azure_region') || 'westeurope';
+  if (!key) return null;
+  const configJSON = JSON.stringify({
+    ReferenceText: referenceText,
+    GradingSystem: 'HundredMark',
+    Granularity: 'Word',
+    EnableMiscue: true
+  });
+  const config = btoa(unescape(encodeURIComponent(configJSON)));
+  const language = lang.includes('-') ? lang : lang + '-US';
+  const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${language}&format=detailed`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Ocp-Apim-Subscription-Key': key,
+      'Content-Type': blob.type || 'audio/webm;codecs=opus',
+      'Pronunciation-Assessment': config
+    },
+    body: blob
+  });
+  const data = await res.json();
+  if (!data.NBest?.[0]?.Words) return null;
+  return buildAzureHTML(data.NBest[0].Words, data.NBest[0].PronunciationAssessment?.PronScore);
+}
+
+function buildAzureHTML(words, pronScore) {
+  let total = 0, scoreSum = 0;
+  const spans = words.map(w => {
+    const pa  = w.PronunciationAssessment || {};
+    const err = pa.ErrorType || 'None';
+    const acc = pa.AccuracyScore ?? 100;
+    if (err === 'Omission') return `<span class="text-gray-600 line-through opacity-50">${w.Word}</span>`;
+    total++; scoreSum += acc;
+    if (acc >= 80) return `<span class="text-emerald-400 font-medium">${w.Word}</span>`;
+    if (acc >= 50) return `<span class="text-amber-400">${w.Word}</span>`;
+    return `<span class="text-rose-400 line-through opacity-70">${w.Word}</span>`;
+  });
+  const score = pronScore != null ? Math.round(pronScore) : (total > 0 ? Math.round(scoreSum / total) : 0);
+  return { html: spans.join(' '), score };
+}
+
 // ── IPA ───────────────────────────────────────────────────────
 async function getIPA(sentence, lang) {
   const cacheKey = 'hl_ipa_' + sentence;
@@ -1583,9 +1637,13 @@ async function toggleRec() {
       document.getElementById('rec-label').textContent = 'Analysiere…';
       document.getElementById('btn-record').style.borderColor = '';
       try {
-        const blob       = new Blob(audioChunks, { type: 'audio/webm' });
-        const transcript = await whisperTranscribe(blob, lang, target);
-        if (transcript) showPronResult(transcript, target);
+        const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+        let result = await azurePronounce(blob, lang, target);
+        if (!result) {
+          const transcript = await whisperTranscribe(blob, lang, target);
+          if (transcript) result = wordDiffHTML(transcript, target);
+        }
+        if (result) showPronResult(result.html, result.score);
       } catch(e) { alert('Fehler: ' + e.message); }
       finally { document.getElementById('rec-label').textContent = 'Aufnehmen'; }
     };
@@ -1613,8 +1671,7 @@ function lev(a,b){
     dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j-1],dp[i-1][j],dp[i][j-1]);
   return dp[m][n];
 }
-function showPronResult(transcript, target) {
-  const { html, score } = wordDiffHTML(transcript, target);
+function showPronResult(html, score) {
   let label, barCls;
   if      (score >= 80) { label = `${score}% – Ausgezeichnet! 🎉`; barCls = 'bg-emerald-400'; }
   else if (score >= 60) { label = `${score}% – Gut! 👍`;           barCls = 'bg-indigo-400'; }
@@ -1817,9 +1874,13 @@ async function startSRSSpeech() {
       document.getElementById('srs-mic-btn').classList.remove('animate-pulse');
       document.getElementById('srs-mic-label').textContent = 'Analysiere…';
       try {
-        const blob       = new Blob(audioChunks, { type: 'audio/webm' });
-        const transcript = await whisperTranscribe(blob, lang, sent.target);
-        if (transcript) showSRSSpeechResult(transcript, sent.target);
+        const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+        let result = await azurePronounce(blob, lang, sent.target);
+        if (!result) {
+          const transcript = await whisperTranscribe(blob, lang, sent.target);
+          if (transcript) result = wordDiffHTML(transcript, sent.target);
+        }
+        if (result) showSRSSpeechResult(result.html, result.score);
         else skipSRSSpeech();
       } catch(e) { skipSRSSpeech(); }
       finally {
@@ -1834,8 +1895,7 @@ async function startSRSSpeech() {
   }
 }
 
-function showSRSSpeechResult(transcript, target) {
-  const { html, score } = wordDiffHTML(transcript, target);
+function showSRSSpeechResult(html, score) {
   document.getElementById('srs-speech-idle').classList.add('hidden');
   document.getElementById('srs-speech-result').classList.remove('hidden');
   document.getElementById('srs-speech-text').innerHTML = html;
@@ -2041,6 +2101,11 @@ function saveSettings() {
   const k = document.getElementById('set-openai-key').value.trim();
   if (k) localStorage.setItem('hl_openai_key', k);
   else localStorage.removeItem('hl_openai_key');
+  const ak = document.getElementById('set-azure-key').value.trim();
+  if (ak) localStorage.setItem('hl_azure_key', ak);
+  else localStorage.removeItem('hl_azure_key');
+  const ar = document.getElementById('set-azure-region').value.trim();
+  localStorage.setItem('hl_azure_region', ar || 'westeurope');
   closeModal('modal-settings');
 }
 
@@ -2083,6 +2148,9 @@ function openModal(id) {
     document.getElementById('set-new-per-day').value = s.newPerDay || 20;
     const k = localStorage.getItem('hl_openai_key') || '';
     document.getElementById('set-openai-key').value = k ? '••••••••••••' : '';
+    const ak = localStorage.getItem('hl_azure_key') || '';
+    document.getElementById('set-azure-key').value = ak ? '••••••••••••' : '';
+    document.getElementById('set-azure-region').value = localStorage.getItem('hl_azure_region') || 'westeurope';
   }
 }
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
