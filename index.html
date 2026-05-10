@@ -1511,9 +1511,9 @@ function wordDiffHTML(transcript, target) {
   const result = [];
   let i = m, j = n;
   while (i > 0 || j > 0) {
-    if (i > 0 && j > 0 && tWords[i-1] === gWords[j-1]) { result.unshift({word:tWords[i-1],ok:true}); i--; j--; }
-    else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) j--;
-    else { result.unshift({word:tWords[i-1],ok:false}); i--; }
+    if (i > 0 && j > 0 && tWords[i-1] === gWords[j-1]) { result.unshift({word:gWords[j-1],ok:true}); i--; j--; }
+    else if (i > 0 && (j === 0 || dp[i-1][j] >= dp[i][j-1])) i--;
+    else { result.unshift({word:gWords[j-1],ok:false}); j--; }
   }
   const correct = result.filter(r=>r.ok).length;
   const score   = Math.round((correct / Math.max(tWords.length, 1)) * 100);
