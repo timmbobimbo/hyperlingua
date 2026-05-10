@@ -1841,6 +1841,17 @@ function rateSRS(rating) {
   const { entry, island, sent } = srsQ.current;
   if (!sent) return;
 
+  // Again: don't persist yet — keep original SRS state so the card stays
+  // visible on the dashboard if the session is ended early
+  if (rating === 0) {
+    srsQ.counts.again++;
+    document.getElementById('ss-again').textContent = srsQ.counts.again;
+    srsQ.done++;
+    srsQ.again.push(entry);
+    loadNextSRSCard();
+    return;
+  }
+
   // Update SRS data
   const oldSrs = sent.srs || { ...SRS0 };
   const newSrs = sm2(oldSrs, rating);
@@ -1864,7 +1875,7 @@ function rateSRS(rating) {
   DB.setHistory(hist);
 
   // Update counts display
-  const key=['again','hard','good','easy'][rating];
+  const key=['hard','good','easy'][rating-1];
   srsQ.counts[key]++;
   document.getElementById('ss-again').textContent = srsQ.counts.again;
   document.getElementById('ss-hard').textContent  = srsQ.counts.hard;
@@ -1872,12 +1883,6 @@ function rateSRS(rating) {
   document.getElementById('ss-easy').textContent  = srsQ.counts.easy;
 
   srsQ.done++;
-
-  // If rated Again → put back in again queue for re-review
-  if (rating === 0) {
-    srsQ.again.push(entry);
-  }
-
   loadNextSRSCard();
 }
 
