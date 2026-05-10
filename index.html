@@ -1751,11 +1751,13 @@ function startSRSSpeech() {
     srsRecActive = true;
     document.getElementById('srs-mic-label').textContent = 'Aufnahme läuft…';
     document.getElementById('srs-mic-btn').classList.add('animate-pulse');
+    document.getElementById('srs-reveal-btn').classList.add('hidden');
   };
   srsRecObj.onend = () => {
     srsRecActive = false;
     document.getElementById('srs-mic-btn').classList.remove('animate-pulse');
     document.getElementById('srs-mic-label').textContent = 'Jetzt sprechen';
+    document.getElementById('srs-reveal-btn').classList.remove('hidden');
   };
   srsRecObj.onresult = e => {
     const got   = e.results[0][0].transcript.toLowerCase().trim();
