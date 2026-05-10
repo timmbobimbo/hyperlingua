@@ -533,7 +533,7 @@
                 <span class="text-xs text-gray-500">Erkannt:</span>
                 <span id="srs-speech-score" class="text-xs font-bold"></span>
               </div>
-              <p id="srs-speech-text" class="text-xs text-gray-400 italic mb-2 truncate"></p>
+              <p id="srs-speech-text" class="text-xs text-gray-400 mb-2 leading-relaxed"></p>
               <div class="h-1 rounded-full bg-gray-700 overflow-hidden">
                 <div id="srs-speech-bar"
                      class="h-full rounded-full transition-all duration-700 bg-emerald-400"
@@ -1478,40 +1478,93 @@ function playShadowTTS() {
   ttsSpeak(s.target, rate);
 }
 
-// pronunciation check
-let recActive=false, recObj=null;
+// ── Whisper + Word-Diff ───────────────────────────────────────
+let mediaRecorder = null, audioChunks = [];
 
-function toggleRec() {
-  if (!('webkitSpeechRecognition' in window||'SpeechRecognition' in window)) {
-    alert('Spracherkennung nicht verfügbar. Bitte Safari oder Chrome verwenden.'); return;
+async function whisperTranscribe(blob, lang) {
+  const key = localStorage.getItem('hl_openai_key');
+  if (!key) { alert('OpenAI API Key fehlt.'); return null; }
+  const form = new FormData();
+  form.append('file', blob, 'rec.webm');
+  form.append('model', 'whisper-1');
+  form.append('language', lang.split('-')[0]);
+  const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + key },
+    body: form
+  });
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'Whisper-Fehler'); }
+  return (await res.json()).text || '';
+}
+
+function wordDiffHTML(transcript, target) {
+  const norm = s => s.toLowerCase().replace(/[^\w\s']/g, '').trim();
+  const tWords = norm(target).split(/\s+/);
+  const gWords = norm(transcript).split(/\s+/);
+  // LCS-based alignment
+  const m = tWords.length, n = gWords.length;
+  const dp = Array.from({length: m+1}, () => new Array(n+1).fill(0));
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = tWords[i-1] === gWords[j-1] ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j], dp[i][j-1]);
+  const result = [];
+  let i = m, j = n;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && tWords[i-1] === gWords[j-1]) { result.unshift({word:tWords[i-1],ok:true}); i--; j--; }
+    else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) j--;
+    else { result.unshift({word:tWords[i-1],ok:false}); i--; }
   }
-  if (recActive) { recObj&&recObj.stop(); return; }
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  recObj=new SR();
-  const island=DB.islands().find(i=>i.id===shadow.islandId);
-  recObj.lang=island?.ttsLang||'es-ES';
-  recObj.interimResults=false; recObj.maxAlternatives=3;
-  recObj.onstart=()=>{
-    recActive=true;
-    document.getElementById('rec-dot').classList.add('animate-pulse');
-    document.getElementById('rec-label').textContent='Aufnahme läuft…';
-    document.getElementById('btn-record').style.borderColor='#f87171';
-  };
-  recObj.onend=()=>{
-    recActive=false;
-    document.getElementById('rec-dot').classList.remove('animate-pulse');
-    document.getElementById('rec-label').textContent='Aufnehmen';
-    document.getElementById('btn-record').style.borderColor='';
-  };
-  recObj.onresult=e=>{
-    const got=e.results[0][0].transcript.toLowerCase().trim();
-    const tgt=shadow.sentences[shadow.idx].target.toLowerCase().trim();
-    showPronResult(got, similarity(got,tgt));
-  };
-  recObj.onerror=e=>{
-    if(e.error==='not-allowed') alert('Mikrofon-Zugriff verweigert.');
-  };
-  recObj.start();
+  const correct = result.filter(r=>r.ok).length;
+  const score   = Math.round((correct / Math.max(tWords.length, 1)) * 100);
+  const html    = result.map(r => r.ok
+    ? `<span class="text-emerald-400 font-medium">${r.word}</span>`
+    : `<span class="text-rose-400 line-through opacity-70">${r.word}</span>`
+  ).join(' ');
+  return { html, score };
+}
+
+// pronunciation check
+let recActive = false;
+
+async function toggleRec() {
+  if (recActive) {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    return;
+  }
+  const key = localStorage.getItem('hl_openai_key');
+  if (!key) { alert('Bitte zuerst den OpenAI API Key in den Einstellungen eintragen.'); return; }
+  const island = DB.islands().find(i => i.id === shadow.islandId);
+  const lang   = island?.ttsLang || 'en-US';
+  const target = shadow.sentences[shadow.idx].target;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks  = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstart = () => {
+      recActive = true;
+      document.getElementById('rec-dot').classList.add('animate-pulse');
+      document.getElementById('rec-label').textContent = 'Aufnahme läuft…';
+      document.getElementById('btn-record').style.borderColor = '#f87171';
+    };
+    mediaRecorder.onstop = async () => {
+      recActive = false;
+      stream.getTracks().forEach(t => t.stop());
+      document.getElementById('rec-dot').classList.remove('animate-pulse');
+      document.getElementById('rec-label').textContent = 'Analysiere…';
+      document.getElementById('btn-record').style.borderColor = '';
+      try {
+        const blob       = new Blob(audioChunks, { type: 'audio/webm' });
+        const transcript = await whisperTranscribe(blob, lang);
+        if (transcript) showPronResult(transcript, target);
+      } catch(e) { alert('Fehler: ' + e.message); }
+      finally { document.getElementById('rec-label').textContent = 'Aufnehmen'; }
+    };
+    mediaRecorder.start();
+  } catch(e) {
+    if (e.name === 'NotAllowedError') alert('Mikrofon-Zugriff verweigert.');
+    else alert('Aufnahme-Fehler: ' + e.message);
+  }
 }
 
 function similarity(a,b){
@@ -1531,21 +1584,22 @@ function lev(a,b){
     dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j-1],dp[i-1][j],dp[i][j-1]);
   return dp[m][n];
 }
-function showPronResult(text,score){
-  let label,barCls;
-  if(score>=80){label=`${score}% – Ausgezeichnet! 🎉`;barCls='bg-emerald-400';}
-  else if(score>=60){label=`${score}% – Gut! 👍`;barCls='bg-indigo-400';}
-  else if(score>=40){label=`${score}% – Üb weiter 💪`;barCls='bg-amber-400';}
-  else{label=`${score}% – Nochmal`;barCls='bg-rose-400';}
+function showPronResult(transcript, target) {
+  const { html, score } = wordDiffHTML(transcript, target);
+  let label, barCls;
+  if      (score >= 80) { label = `${score}% – Ausgezeichnet! 🎉`; barCls = 'bg-emerald-400'; }
+  else if (score >= 60) { label = `${score}% – Gut! 👍`;           barCls = 'bg-indigo-400'; }
+  else if (score >= 40) { label = `${score}% – Üb weiter 💪`;      barCls = 'bg-amber-400'; }
+  else                  { label = `${score}% – Nochmal`;            barCls = 'bg-rose-400'; }
   document.getElementById('pron-result').classList.remove('hidden');
-  document.getElementById('pron-text').textContent='"'+text+'"';
-  const sc=document.getElementById('pron-score');
-  sc.textContent=label;
-  sc.className='text-sm font-bold '+(score>=80?'text-emerald-400':score>=60?'text-indigo-400':score>=40?'text-amber-400':'text-rose-400');
-  const bar=document.getElementById('pron-bar');
-  bar.className='h-full rounded-full transition-all duration-700 '+barCls;
-  bar.style.width='0%';
-  setTimeout(()=>bar.style.width=score+'%',50);
+  document.getElementById('pron-text').innerHTML = html;
+  const sc = document.getElementById('pron-score');
+  sc.textContent = label;
+  sc.className = 'text-sm font-bold ' + (score>=80?'text-emerald-400':score>=60?'text-indigo-400':score>=40?'text-amber-400':'text-rose-400');
+  const bar = document.getElementById('pron-bar');
+  bar.className = 'h-full rounded-full transition-all duration-700 ' + barCls;
+  bar.style.width = '0%';
+  setTimeout(() => bar.style.width = score + '%', 50);
 }
 
 // ── SRS Review Session ────────────────────────────────────────
@@ -1653,7 +1707,7 @@ function loadNextSRSCard() {
 
   // Stop any running TTS / recognition from previous card
   window.speechSynthesis && window.speechSynthesis.cancel();
-  if (srsRecActive && srsRecObj) srsRecObj.stop();
+  if (srsRecActive && mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
 
   // Reset flip
   document.getElementById('srs-flip').classList.remove('flipped');
@@ -1704,49 +1758,58 @@ function loadNextSRSCard() {
 }
 
 // ── SRS speech recognition ───────────────────────────────────
-let srsRecActive = false, srsRecObj = null;
+let srsRecActive = false;
 
-function startSRSSpeech() {
-  if (srsRecActive) { srsRecObj && srsRecObj.stop(); return; }
-
-  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-    skipSRSSpeech(); return;
+async function startSRSSpeech() {
+  if (srsRecActive) {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    return;
   }
+  const key = localStorage.getItem('hl_openai_key');
+  if (!key) { skipSRSSpeech(); return; }
 
   const { island, sent } = srsQ.current;
-  const SR  = window.SpeechRecognition || window.webkitSpeechRecognition;
-  srsRecObj = new SR();
-  srsRecObj.lang             = island.ttsLang || 'es-ES';
-  srsRecObj.interimResults   = false;
-  srsRecObj.maxAlternatives  = 3;
+  const lang = island.ttsLang || 'en-US';
 
-  srsRecObj.onstart = () => {
-    srsRecActive = true;
-    document.getElementById('srs-mic-label').textContent = 'Aufnahme läuft…';
-    document.getElementById('srs-mic-btn').classList.add('animate-pulse');
-    document.getElementById('srs-reveal-btn').classList.add('hidden');
-  };
-  srsRecObj.onend = () => {
-    srsRecActive = false;
-    document.getElementById('srs-mic-btn').classList.remove('animate-pulse');
-    document.getElementById('srs-mic-label').textContent = 'Jetzt sprechen';
-    document.getElementById('srs-reveal-btn').classList.remove('hidden');
-  };
-  srsRecObj.onresult = e => {
-    const got   = e.results[0][0].transcript.toLowerCase().trim();
-    const score = similarity(got, sent.target.toLowerCase().trim());
-    showSRSSpeechResult(got, score);
-  };
-  srsRecObj.onerror = e => {
-    if (e.error === 'not-allowed') skipSRSSpeech();
-  };
-  srsRecObj.start();
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks  = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstart = () => {
+      srsRecActive = true;
+      document.getElementById('srs-mic-label').textContent = 'Aufnahme läuft…';
+      document.getElementById('srs-mic-btn').classList.add('animate-pulse');
+      document.getElementById('srs-reveal-btn').classList.add('hidden');
+    };
+    mediaRecorder.onstop = async () => {
+      srsRecActive = false;
+      stream.getTracks().forEach(t => t.stop());
+      document.getElementById('srs-mic-btn').classList.remove('animate-pulse');
+      document.getElementById('srs-mic-label').textContent = 'Analysiere…';
+      try {
+        const blob       = new Blob(audioChunks, { type: 'audio/webm' });
+        const transcript = await whisperTranscribe(blob, lang);
+        if (transcript) showSRSSpeechResult(transcript, sent.target);
+        else skipSRSSpeech();
+      } catch(e) { skipSRSSpeech(); }
+      finally {
+        document.getElementById('srs-mic-label').textContent = 'Jetzt sprechen';
+        document.getElementById('srs-reveal-btn').classList.remove('hidden');
+      }
+    };
+    mediaRecorder.start();
+  } catch(e) {
+    if (e.name === 'NotAllowedError') alert('Mikrofon-Zugriff verweigert.');
+    skipSRSSpeech();
+  }
 }
 
-function showSRSSpeechResult(text, score) {
+function showSRSSpeechResult(transcript, target) {
+  const { html, score } = wordDiffHTML(transcript, target);
   document.getElementById('srs-speech-idle').classList.add('hidden');
   document.getElementById('srs-speech-result').classList.remove('hidden');
-  document.getElementById('srs-speech-text').textContent = '"' + text + '"';
+  document.getElementById('srs-speech-text').innerHTML = html;
 
   let label, color;
   if      (score >= 80) { label = score + '% – Top! 🎉';       color = '#34d399'; }
@@ -1782,7 +1845,7 @@ function enableRevealBtn() {
 function flipSRSCard() {
   if (srsQ.flipped) return;
   // Stop any running recognition
-  if (srsRecActive && srsRecObj) srsRecObj.stop();
+  if (srsRecActive && mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
 
   document.getElementById('srs-flip').classList.add('flipped');
   srsQ.flipped = true;
