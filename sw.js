@@ -1,4 +1,4 @@
-const CACHE = 'hyperlingua-v1';
+const CACHE = 'hyperlingua-v2';
 const ASSETS = [
   '/hyperlingua/',
   '/hyperlingua/index.html',
