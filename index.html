@@ -1481,13 +1481,14 @@ function playShadowTTS() {
 // ── Whisper + Word-Diff ───────────────────────────────────────
 let mediaRecorder = null, audioChunks = [];
 
-async function whisperTranscribe(blob, lang) {
+async function whisperTranscribe(blob, lang, prompt = '') {
   const key = localStorage.getItem('hl_openai_key');
   if (!key) { alert('OpenAI API Key fehlt.'); return null; }
   const form = new FormData();
   form.append('file', blob, 'rec.webm');
   form.append('model', 'whisper-1');
   form.append('language', lang.split('-')[0]);
+  if (prompt) form.append('prompt', prompt);
   const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + key },
@@ -1555,7 +1556,7 @@ async function toggleRec() {
       document.getElementById('btn-record').style.borderColor = '';
       try {
         const blob       = new Blob(audioChunks, { type: 'audio/webm' });
-        const transcript = await whisperTranscribe(blob, lang);
+        const transcript = await whisperTranscribe(blob, lang, target);
         if (transcript) showPronResult(transcript, target);
       } catch(e) { alert('Fehler: ' + e.message); }
       finally { document.getElementById('rec-label').textContent = 'Aufnehmen'; }
@@ -1789,7 +1790,7 @@ async function startSRSSpeech() {
       document.getElementById('srs-mic-label').textContent = 'Analysiere…';
       try {
         const blob       = new Blob(audioChunks, { type: 'audio/webm' });
-        const transcript = await whisperTranscribe(blob, lang);
+        const transcript = await whisperTranscribe(blob, lang, sent.target);
         if (transcript) showSRSSpeechResult(transcript, sent.target);
         else skipSRSSpeech();
       } catch(e) { skipSRSSpeech(); }
