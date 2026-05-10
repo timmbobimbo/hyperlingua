@@ -95,6 +95,8 @@
               data-view="shadowing" onclick="nav('shadowing')">Shadowing</button>
       <button class="nav-btn px-3 h-14 text-sm font-medium text-gray-400"
               data-view="recall"    onclick="nav('recall')">Review</button>
+      <button class="nav-btn px-3 h-14 text-sm font-medium text-gray-400"
+              data-view="dialogue"  onclick="nav('dialogue')">Dialogue</button>
     </nav>
     <div class="flex items-center gap-1">
     <button id="auth-nav-btn" onclick="openModal('modal-auth')"
@@ -154,6 +156,13 @@
         d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
     </svg>
     <span>Review</span>
+  </button>
+  <button class="bot-btn nav-btn" data-view="dialogue" onclick="nav('dialogue')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+    </svg>
+    <span>Dialogue</span>
   </button>
 </nav>
 
@@ -940,6 +949,52 @@
   </div>
 </div>
 
+<!-- ══════════════════════ DIALOGUE ══════════════════════ -->
+<div id="view-dialogue" class="hidden fade-up">
+  <h2 class="text-2xl font-bold mb-1">Dialogue</h2>
+  <p class="text-sm text-gray-500 mb-6">Freies Gespräch — wende dein Wissen im Kontext an</p>
+
+  <div class="rounded-2xl border border-gray-800 p-5 mb-4" style="background:#111117">
+    <label class="block text-xs text-gray-500 uppercase tracking-widest mb-2">Island</label>
+    <select id="dlg-island-sel" onchange="dlgSelectIsland()"
+            class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-sm
+                   text-gray-200 focus:outline-none focus:border-indigo-500">
+      <option value="">Wähle eine Insel…</option>
+    </select>
+  </div>
+
+  <div id="dlg-start-area" class="hidden text-center py-8">
+    <div class="text-4xl mb-3">💬</div>
+    <p class="text-sm text-gray-500 mb-5">KI erstellt ein passendes Szenario aus deiner Island und führt ein echtes Gespräch mit dir.</p>
+    <button onclick="startDialogue()"
+            class="px-8 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                   text-white font-medium transition-colors">Gespräch starten</button>
+  </div>
+
+  <div id="dlg-chat-area" class="hidden space-y-4">
+    <div id="dlg-scenario" class="text-xs text-indigo-300/70 px-4 py-2.5 rounded-xl
+                                   border border-indigo-500/20 bg-indigo-500/5 leading-relaxed"></div>
+
+    <div id="dlg-messages" class="space-y-3 max-h-[50vh] overflow-y-auto pr-1"></div>
+
+    <div id="dlg-user-turn" class="hidden flex flex-col items-center gap-2 pt-2">
+      <button id="dlg-mic-btn" onclick="toggleDlgMic()"
+              class="flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-indigo-500
+                     bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 font-medium
+                     text-sm transition-colors">
+        <span id="dlg-mic-dot" class="w-2 h-2 rounded-full bg-indigo-400"></span>
+        <span id="dlg-mic-label">Antworten</span>
+      </button>
+    </div>
+
+    <div id="dlg-thinking" class="hidden text-center text-xs text-gray-600 py-2">KI denkt…</div>
+
+    <button onclick="endDialogue()"
+            class="w-full py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700
+                   text-gray-500 text-sm transition-colors mt-2">Gespräch beenden</button>
+  </div>
+</div>
+
 <!-- ══════════════════════ JAVASCRIPT ══════════════════════ -->
 <script>
 // ── helpers ───────────────────────────────────────────────────
@@ -1150,7 +1205,7 @@ function getSRSStats(filterIslandId) {
 let currentView = 'dashboard';
 
 function nav(view) {
-  ['dashboard','islands','shadowing','recall'].forEach(v => {
+  ['dashboard','islands','shadowing','recall','dialogue'].forEach(v => {
     const el = document.getElementById('view-'+v);
     el.classList.add('hidden'); el.classList.remove('fade-up');
   });
@@ -1165,6 +1220,7 @@ function nav(view) {
   if (view === 'islands')    renderIslands();
   if (view === 'shadowing')  initShadowSel();
   if (view === 'recall')     initSRSSetup();
+  if (view === 'dialogue')   initDialogueView();
 }
 
 // ── dashboard ─────────────────────────────────────────────────
@@ -2270,6 +2326,203 @@ function maybeAddSample() {
     document.getElementById('modal-onboarding').classList.remove('hidden');
   }
 })();
+
+// ── Dialogue ──────────────────────────────────────────────────
+let dlg = { islandId: null, lang: 'en-US', history: [], micActive: false, ttsPlaying: false };
+
+function initDialogueView() {
+  const sel = document.getElementById('dlg-island-sel');
+  const islands = DB.islands();
+  sel.innerHTML = '<option value="">Wähle eine Insel…</option>' +
+    islands.map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join('');
+  if (dlg.islandId) sel.value = dlg.islandId;
+  dlgSelectIsland();
+}
+
+function dlgSelectIsland() {
+  const id = document.getElementById('dlg-island-sel').value;
+  dlg.islandId = id;
+  document.getElementById('dlg-start-area').classList.toggle('hidden', !id);
+  document.getElementById('dlg-chat-area').classList.add('hidden');
+}
+
+async function gptChat(messages) {
+  const key = localStorage.getItem('hl_openai_key');
+  if (!key) throw new Error('OpenAI API Key fehlt');
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'gpt-4o-mini', messages, max_tokens: 120, temperature: 0.8 })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.choices?.[0]?.message?.content?.trim() || '';
+}
+
+async function startDialogue() {
+  const island = DB.islands().find(i => i.id === dlg.islandId);
+  if (!island) return;
+  dlg.lang = island.ttsLang || 'en-US';
+  dlg.history = [];
+
+  document.getElementById('dlg-start-area').classList.add('hidden');
+  document.getElementById('dlg-chat-area').classList.remove('hidden');
+  document.getElementById('dlg-messages').innerHTML = '';
+  document.getElementById('dlg-user-turn').classList.add('hidden');
+  document.getElementById('dlg-thinking').classList.remove('hidden');
+
+  const sentences = (island.sentences || []).slice(0, 15).map(s => `- ${s.target}`).join('\n');
+  const langName = island.language || 'Englisch';
+
+  const systemPrompt = `You are a friendly, natural conversation partner helping someone practice ${langName}.
+The learner's island is called "${island.name}". These are some of their practice sentences:
+${sentences}
+
+Rules:
+- Respond ONLY in ${langName}
+- Keep every response to 1-2 short sentences maximum
+- Naturally create situations where the learner can use their practice sentences
+- Be encouraging and realistic — like a real colleague or friend
+- After about 5 exchanges, wrap up the conversation naturally
+- Start the conversation with a brief scenario setup (1 sentence in German in parentheses) then your first line in ${langName}`;
+
+  dlg.history.push({ role: 'system', content: systemPrompt });
+
+  try {
+    const firstMsg = await gptChat(dlg.history);
+    dlg.history.push({ role: 'assistant', content: firstMsg });
+
+    const scenarioMatch = firstMsg.match(/\(([^)]+)\)/);
+    const cleanMsg = firstMsg.replace(/\([^)]+\)\s*/,'').trim();
+
+    if (scenarioMatch) {
+      document.getElementById('dlg-scenario').textContent = '📍 ' + scenarioMatch[1];
+    }
+
+    document.getElementById('dlg-thinking').classList.add('hidden');
+    appendDlgMessage('ai', cleanMsg);
+    await dlgSpeak(cleanMsg);
+    showDlgUserTurn();
+  } catch(e) {
+    document.getElementById('dlg-thinking').classList.add('hidden');
+    alert('Fehler: ' + e.message);
+  }
+}
+
+function appendDlgMessage(role, text, score) {
+  const wrap = document.getElementById('dlg-messages');
+  const div = document.createElement('div');
+  div.className = role === 'ai'
+    ? 'flex gap-2 items-end'
+    : 'flex gap-2 items-end justify-end';
+
+  const bubble = document.createElement('div');
+  bubble.className = role === 'ai'
+    ? 'max-w-xs rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm text-gray-100'
+    : 'max-w-xs rounded-2xl rounded-br-sm px-4 py-2.5 text-sm text-gray-100';
+  bubble.style.background = role === 'ai' ? '#1f1f2b' : '#3730a3';
+  bubble.textContent = text;
+
+  if (role === 'ai') div.appendChild(bubble);
+  else {
+    if (score != null) {
+      const sc = document.createElement('div');
+      sc.className = 'text-xs mb-1 ' + (score >= 80 ? 'text-emerald-400' : score >= 50 ? 'text-amber-400' : 'text-rose-400');
+      sc.textContent = score + '%';
+      const col = document.createElement('div');
+      col.className = 'flex flex-col items-end';
+      col.appendChild(bubble); col.appendChild(sc);
+      div.appendChild(col);
+    } else {
+      div.appendChild(bubble);
+    }
+  }
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+async function dlgSpeak(text) {
+  dlg.ttsPlaying = true;
+  const btn = document.getElementById('dlg-mic-btn');
+  if (btn) btn.disabled = true;
+  try { await ttsSpeak(text, 1); } catch(e) { /* ignore */ }
+  dlg.ttsPlaying = false;
+  if (btn) btn.disabled = false;
+}
+
+function showDlgUserTurn() {
+  document.getElementById('dlg-user-turn').classList.remove('hidden');
+  document.getElementById('dlg-mic-label').textContent = 'Antworten';
+  document.getElementById('dlg-mic-dot').className = 'w-2 h-2 rounded-full bg-indigo-400';
+}
+
+async function toggleDlgMic() {
+  if (dlg.micActive) {
+    if (mediaRecorder?.state !== 'inactive') mediaRecorder.stop();
+    return;
+  }
+  dlg.micActive = true;
+  document.getElementById('dlg-mic-label').textContent = 'Aufnahme läuft…';
+  document.getElementById('dlg-mic-dot').className = 'w-2 h-2 rounded-full bg-rose-400 animate-pulse';
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstop = async () => {
+      dlg.micActive = false;
+      stream.getTracks().forEach(t => t.stop());
+      document.getElementById('dlg-mic-label').textContent = 'Analysiere…';
+      document.getElementById('dlg-user-turn').classList.add('hidden');
+      document.getElementById('dlg-thinking').classList.remove('hidden');
+      try {
+        const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+        const transcript = await whisperTranscribe(blob, dlg.lang);
+        if (!transcript) { showDlgUserTurn(); document.getElementById('dlg-thinking').classList.add('hidden'); return; }
+
+        // Pronunciation score (optional, non-blocking)
+        let score = null;
+        try {
+          const azKey = localStorage.getItem('hl_azure_key');
+          const SDK   = window.SpeechSDK;
+          if (azKey && SDK) {
+            const r = await azurePronounce(blob, dlg.lang, transcript);
+            if (r) score = r.score;
+          }
+        } catch(e) { /* skip */ }
+
+        appendDlgMessage('user', transcript, score);
+        dlg.history.push({ role: 'user', content: transcript });
+
+        const reply = await gptChat(dlg.history);
+        dlg.history.push({ role: 'assistant', content: reply });
+        document.getElementById('dlg-thinking').classList.add('hidden');
+        appendDlgMessage('ai', reply);
+        await dlgSpeak(reply);
+        showDlgUserTurn();
+      } catch(e) {
+        document.getElementById('dlg-thinking').classList.add('hidden');
+        alert('Fehler: ' + e.message);
+        showDlgUserTurn();
+      }
+    };
+    mediaRecorder.start();
+  } catch(e) {
+    dlg.micActive = false;
+    document.getElementById('dlg-mic-label').textContent = 'Antworten';
+    if (e.name === 'NotAllowedError') alert('Mikrofon-Zugriff verweigert.');
+  }
+}
+
+function endDialogue() {
+  if (mediaRecorder?.state !== 'inactive') mediaRecorder.stop();
+  stopTTS();
+  dlg.history = [];
+  dlg.micActive = false;
+  document.getElementById('dlg-chat-area').classList.add('hidden');
+  document.getElementById('dlg-start-area').classList.remove('hidden');
+}
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js');
