@@ -1654,7 +1654,7 @@ async function toggleRec() {
           const data    = jsonStr ? JSON.parse(jsonStr) : null;
           const words   = data?.NBest?.[0]?.Words;
           const pScore  = data?.NBest?.[0]?.PronunciationAssessment?.PronScore;
-          if (words?.length) showPronResult(buildAzureHTML(words, pScore));
+          if (words?.length) { const r = buildAzureHTML(words, pScore); showPronResult(r.html, r.score); }
         } catch(e) { console.warn('Azure parse:', e); }
         finally { uiOff(); }
       }, err => { azureRecognizer = null; recognizer.close(); uiOff(); console.warn('Azure:', err); });
@@ -1919,7 +1919,7 @@ async function startSRSSpeech() {
           const data    = jsonStr ? JSON.parse(jsonStr) : null;
           const words   = data?.NBest?.[0]?.Words;
           const pScore  = data?.NBest?.[0]?.PronunciationAssessment?.PronScore;
-          if (words?.length) showSRSSpeechResult(buildAzureHTML(words, pScore));
+          if (words?.length) { const r = buildAzureHTML(words, pScore); showSRSSpeechResult(r.html, r.score); }
           else skipSRSSpeech();
         } catch(e) { skipSRSSpeech(); }
         finally { uiOff(); }
