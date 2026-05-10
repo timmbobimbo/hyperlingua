@@ -6,6 +6,7 @@
   <title>HyperLingua</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@1.42.0/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js"></script>
   <style>
     body { background:#09090f; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
 
@@ -1567,7 +1568,7 @@ function playShadowTTS() {
 }
 
 // ── Whisper + Word-Diff ───────────────────────────────────────
-let mediaRecorder = null, audioChunks = [];
+let mediaRecorder = null, audioChunks = [], azureRecognizer = null;
 
 async function whisperTranscribe(blob, lang, prompt = '') {
   const key = localStorage.getItem('hl_openai_key');
@@ -1616,47 +1617,76 @@ function wordDiffHTML(transcript, target) {
 let recActive = false;
 
 async function toggleRec() {
-  if (recActive) {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-    return;
-  }
-  const key = localStorage.getItem('hl_openai_key');
-  if (!key) { alert('Bitte zuerst den OpenAI API Key in den Einstellungen eintragen.'); return; }
+  if (recActive) { if (mediaRecorder?.state !== 'inactive') mediaRecorder.stop(); return; }
+  if (azureRecognizer) return;
+
   const island = DB.islands().find(i => i.id === shadow.islandId);
   const lang   = island?.ttsLang || 'en-US';
   const target = shadow.sentences[shadow.idx].target;
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    audioChunks  = [];
-    mediaRecorder = new MediaRecorder(stream);
-    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
-    mediaRecorder.onstart = () => {
-      recActive = true;
-      document.getElementById('rec-dot').classList.add('animate-pulse');
-      document.getElementById('rec-label').textContent = 'Aufnahme läuft…';
-      document.getElementById('btn-record').style.borderColor = '#f87171';
-    };
-    mediaRecorder.onstop = async () => {
-      recActive = false;
-      stream.getTracks().forEach(t => t.stop());
-      document.getElementById('rec-dot').classList.remove('animate-pulse');
-      document.getElementById('rec-label').textContent = 'Analysiere…';
-      document.getElementById('btn-record').style.borderColor = '';
-      try {
-        const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
-        let result = await azurePronounce(blob, lang, target);
-        if (!result) {
+  const SDK    = window.SpeechSDK;
+  const azKey  = localStorage.getItem('hl_azure_key');
+
+  const uiOn  = () => { document.getElementById('rec-dot').classList.add('animate-pulse'); document.getElementById('rec-label').textContent='Aufnahme läuft…'; document.getElementById('btn-record').style.borderColor='#f87171'; };
+  const uiOff = (lbl='Aufnehmen') => { document.getElementById('rec-dot').classList.remove('animate-pulse'); document.getElementById('rec-label').textContent=lbl; document.getElementById('btn-record').style.borderColor=''; };
+
+  if (azKey && SDK) {
+    uiOn();
+    try {
+      const region = localStorage.getItem('hl_azure_region') || 'westeurope';
+      const language = lang.includes('-') ? lang : lang + '-US';
+      const speechCfg = SDK.SpeechConfig.fromSubscription(azKey, region);
+      speechCfg.speechRecognitionLanguage = language;
+      const assessCfg = new SDK.PronunciationAssessmentConfig(
+        target,
+        SDK.PronunciationAssessmentGradingSystem.HundredMark,
+        SDK.PronunciationAssessmentGranularity.Word,
+        true
+      );
+      const audioCfg  = SDK.AudioConfig.fromDefaultMicrophoneInput();
+      const recognizer = new SDK.SpeechRecognizer(speechCfg, audioCfg);
+      assessCfg.applyTo(recognizer);
+      azureRecognizer = recognizer;
+      recognizer.recognizeOnceAsync(result => {
+        azureRecognizer = null; recognizer.close();
+        uiOff('Analysiere…');
+        try {
+          const jsonStr = result.properties.getProperty(SDK.PropertyId.SpeechServiceResponse_JsonResult);
+          const data    = jsonStr ? JSON.parse(jsonStr) : null;
+          const words   = data?.NBest?.[0]?.Words;
+          const pScore  = data?.NBest?.[0]?.PronunciationAssessment?.PronScore;
+          if (words?.length) showPronResult(buildAzureHTML(words, pScore));
+        } catch(e) { console.warn('Azure parse:', e); }
+        finally { uiOff(); }
+      }, err => { azureRecognizer = null; recognizer.close(); uiOff(); console.warn('Azure:', err); });
+    } catch(e) {
+      uiOff();
+      if (e.name === 'NotAllowedError') alert('Mikrofon-Zugriff verweigert.');
+      else console.warn('Azure setup:', e);
+    }
+
+  } else {
+    const oaiKey = localStorage.getItem('hl_openai_key');
+    if (!oaiKey) { alert('Bitte OpenAI API Key in den Einstellungen eintragen.'); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunks  = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+      mediaRecorder.onstart = () => { recActive = true; uiOn(); };
+      mediaRecorder.onstop = async () => {
+        recActive = false; stream.getTracks().forEach(t => t.stop()); uiOff('Analysiere…');
+        try {
+          const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
           const transcript = await whisperTranscribe(blob, lang);
-          if (transcript) result = wordDiffHTML(transcript, target);
-        }
-        if (result) showPronResult(result.html, result.score);
-      } catch(e) { alert('Fehler: ' + e.message); }
-      finally { document.getElementById('rec-label').textContent = 'Aufnehmen'; }
-    };
-    mediaRecorder.start();
-  } catch(e) {
-    if (e.name === 'NotAllowedError') alert('Mikrofon-Zugriff verweigert.');
-    else alert('Aufnahme-Fehler: ' + e.message);
+          if (transcript) { const r = wordDiffHTML(transcript, target); showPronResult(r.html, r.score); }
+        } catch(e) { alert('Fehler: ' + e.message); }
+        finally { uiOff(); }
+      };
+      mediaRecorder.start();
+    } catch(e) {
+      if (e.name === 'NotAllowedError') alert('Mikrofon-Zugriff verweigert.');
+      else alert('Aufnahme-Fehler: ' + e.message);
+    }
   }
 }
 
@@ -1853,51 +1883,77 @@ function loadNextSRSCard() {
 let srsRecActive = false;
 
 async function startSRSSpeech() {
-  if (srsRecActive) {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-    return;
-  }
-  const key = localStorage.getItem('hl_openai_key');
-  if (!key) { skipSRSSpeech(); return; }
+  if (srsRecActive) { if (mediaRecorder?.state !== 'inactive') mediaRecorder.stop(); return; }
+  if (azureRecognizer) return;
 
   const { island, sent } = srsQ.current;
   const lang = island.ttsLang || 'en-US';
+  const SDK  = window.SpeechSDK;
+  const azKey = localStorage.getItem('hl_azure_key');
 
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    audioChunks  = [];
-    mediaRecorder = new MediaRecorder(stream);
-    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
-    mediaRecorder.onstart = () => {
-      srsRecActive = true;
-      document.getElementById('srs-mic-label').textContent = 'Aufnahme läuft…';
-      document.getElementById('srs-mic-btn').classList.add('animate-pulse');
-      document.getElementById('srs-reveal-btn').classList.add('hidden');
-    };
-    mediaRecorder.onstop = async () => {
-      srsRecActive = false;
-      stream.getTracks().forEach(t => t.stop());
-      document.getElementById('srs-mic-btn').classList.remove('animate-pulse');
-      document.getElementById('srs-mic-label').textContent = 'Analysiere…';
-      try {
-        const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
-        let result = await azurePronounce(blob, lang, sent.target);
-        if (!result) {
+  const uiOn  = () => { document.getElementById('srs-mic-label').textContent='Aufnahme läuft…'; document.getElementById('srs-mic-btn').classList.add('animate-pulse'); document.getElementById('srs-reveal-btn').classList.add('hidden'); };
+  const uiOff = (lbl='Jetzt sprechen') => { document.getElementById('srs-mic-btn').classList.remove('animate-pulse'); document.getElementById('srs-mic-label').textContent=lbl; document.getElementById('srs-reveal-btn').classList.remove('hidden'); };
+
+  if (azKey && SDK) {
+    uiOn();
+    try {
+      const region   = localStorage.getItem('hl_azure_region') || 'westeurope';
+      const language = lang.includes('-') ? lang : lang + '-US';
+      const speechCfg = SDK.SpeechConfig.fromSubscription(azKey, region);
+      speechCfg.speechRecognitionLanguage = language;
+      const assessCfg = new SDK.PronunciationAssessmentConfig(
+        sent.target,
+        SDK.PronunciationAssessmentGradingSystem.HundredMark,
+        SDK.PronunciationAssessmentGranularity.Word,
+        true
+      );
+      const audioCfg   = SDK.AudioConfig.fromDefaultMicrophoneInput();
+      const recognizer = new SDK.SpeechRecognizer(speechCfg, audioCfg);
+      assessCfg.applyTo(recognizer);
+      azureRecognizer  = recognizer;
+      recognizer.recognizeOnceAsync(result => {
+        azureRecognizer = null; recognizer.close();
+        uiOff('Analysiere…');
+        try {
+          const jsonStr = result.properties.getProperty(SDK.PropertyId.SpeechServiceResponse_JsonResult);
+          const data    = jsonStr ? JSON.parse(jsonStr) : null;
+          const words   = data?.NBest?.[0]?.Words;
+          const pScore  = data?.NBest?.[0]?.PronunciationAssessment?.PronScore;
+          if (words?.length) showSRSSpeechResult(buildAzureHTML(words, pScore));
+          else skipSRSSpeech();
+        } catch(e) { skipSRSSpeech(); }
+        finally { uiOff(); }
+      }, err => { azureRecognizer = null; recognizer.close(); uiOff(); skipSRSSpeech(); });
+    } catch(e) {
+      uiOff();
+      if (e.name !== 'NotAllowedError') skipSRSSpeech();
+      else alert('Mikrofon-Zugriff verweigert.');
+    }
+
+  } else {
+    const oaiKey = localStorage.getItem('hl_openai_key');
+    if (!oaiKey) { skipSRSSpeech(); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunks  = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+      mediaRecorder.onstart = () => { srsRecActive = true; uiOn(); };
+      mediaRecorder.onstop = async () => {
+        srsRecActive = false; stream.getTracks().forEach(t => t.stop()); uiOff('Analysiere…');
+        try {
+          const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
           const transcript = await whisperTranscribe(blob, lang);
-          if (transcript) result = wordDiffHTML(transcript, sent.target);
-        }
-        if (result) showSRSSpeechResult(result.html, result.score);
-        else skipSRSSpeech();
-      } catch(e) { skipSRSSpeech(); }
-      finally {
-        document.getElementById('srs-mic-label').textContent = 'Jetzt sprechen';
-        document.getElementById('srs-reveal-btn').classList.remove('hidden');
-      }
-    };
-    mediaRecorder.start();
-  } catch(e) {
-    if (e.name === 'NotAllowedError') alert('Mikrofon-Zugriff verweigert.');
-    skipSRSSpeech();
+          if (transcript) { const r = wordDiffHTML(transcript, sent.target); showSRSSpeechResult(r.html, r.score); }
+          else skipSRSSpeech();
+        } catch(e) { skipSRSSpeech(); }
+        finally { uiOff(); }
+      };
+      mediaRecorder.start();
+    } catch(e) {
+      if (e.name === 'NotAllowedError') alert('Mikrofon-Zugriff verweigert.');
+      skipSRSSpeech();
+    }
   }
 }
 
