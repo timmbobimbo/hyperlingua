@@ -1652,7 +1652,6 @@ async function toggleRec() {
         uiOff('Analysiere…');
         try {
           const jsonStr = result.properties.getProperty(SDK.PropertyId.SpeechServiceResponse_JsonResult);
-          console.log('Azure reason:', result.reason, 'JSON:', jsonStr);
           const data    = jsonStr ? JSON.parse(jsonStr) : null;
           const words   = data?.NBest?.[0]?.Words;
           const pScore  = data?.NBest?.[0]?.PronunciationAssessment?.PronScore;
