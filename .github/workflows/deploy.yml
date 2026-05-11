@@ -1,0 +1,51 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache busting build
+        run: |
+          JS_HASH=$(sha256sum app.js | cut -c1-8)
+          CSS_HASH=$(sha256sum style.css | cut -c1-8)
+
+          mkdir dist
+
+          # Copy everything except the unhashed source files
+          find . -maxdepth 1 \
+            ! -name '.' ! -name '.git' ! -name '.github' \
+            ! -name 'dist' ! -name 'app.js' ! -name 'style.css' \
+            -exec cp -r {} dist/ \;
+
+          # Copy icons, islands, supabase subdirs explicitly (find only covers maxdepth 1)
+          cp app.js    "dist/app.${JS_HASH}.js"
+          cp style.css "dist/style.${CSS_HASH}.css"
+
+          # Patch index.html references
+          sed -i "s|src=\"app\.js\"|src=\"app.${JS_HASH}.js\"|g"       dist/index.html
+          sed -i "s|href=\"style\.css\"|href=\"style.${CSS_HASH}.css\"|g" dist/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+      - uses: actions/deploy-pages@v4
+        id: deployment
