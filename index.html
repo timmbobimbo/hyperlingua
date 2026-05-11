@@ -287,7 +287,7 @@
 <!-- ══════════════════════ SHADOWING ══════════════════════ -->
 <div id="view-shadowing" class="hidden fade-up">
   <h2 class="text-2xl font-bold mb-1">Shadowing</h2>
-  <p class="text-sm text-gray-500 mb-5">Hören, nachsprechen, Aussprache trainieren</p>
+  <p class="text-sm text-gray-500 mb-5">Hören, imitieren, Aussprache trainieren</p>
 
   <div class="mb-3">
     <label class="block text-xs text-gray-500 mb-1.5 uppercase tracking-widest">Island</label>
@@ -298,32 +298,32 @@
     </select>
   </div>
 
-  <!-- Voice row -->
-  <div id="voice-row" class="hidden mb-5">
-    <label class="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">Stimme</label>
-    <select id="voice-sel"
-            class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
-                   focus:border-indigo-500 focus:outline-none" style="background:#1a1a24">
-      <option value="nova">Nova (weiblich)</option>
-      <option value="alloy">Alloy (neutral)</option>
-      <option value="echo">Echo (männlich)</option>
-      <option value="fable">Fable (britisch)</option>
-      <option value="onyx">Onyx (tief)</option>
-      <option value="shimmer">Shimmer (weiblich, sanft)</option>
-    </select>
-  </div>
-
   <div id="shadow-empty" class="text-center py-16 text-gray-600">
     <div class="text-4xl mb-3">🎙️</div>
     <p class="text-sm">Wähle eine Island</p>
   </div>
 
-  <div id="shadow-player" class="hidden space-y-4">
-    <!-- Sentence card -->
+  <div id="shadow-player" class="hidden">
     <div class="rounded-2xl border border-gray-800 p-6" style="background:#111117">
-      <div class="flex items-center justify-between mb-4">
+
+      <!-- Header: progress + settings + nav -->
+      <div class="flex items-center justify-between mb-5">
         <span id="shadow-prog" class="text-xs text-gray-600 font-mono">1 / 1</span>
-        <div class="flex gap-2">
+        <div class="flex items-center gap-1">
+          <button onclick="toggleShadowSettings()"
+                  class="p-2 rounded-lg text-gray-600 hover:text-gray-400 hover:bg-gray-800 transition-colors"
+                  title="Einstellungen">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94
+                   3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724
+                   1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572
+                   1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31
+                   -.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724
+                   1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </button>
           <button onclick="shadowPrev()" class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -337,31 +337,50 @@
         </div>
       </div>
 
-      <div class="text-center mb-6">
-        <p id="shadow-sentence"    class="text-2xl font-medium text-gray-100 mb-2 leading-snug"></p>
-        <p id="shadow-ipa"         class="text-xs text-indigo-400/60 font-mono tracking-wide mb-1 min-h-[1.2em]"></p>
-        <p id="shadow-translation" class="text-sm text-gray-500"></p>
+      <!-- Settings panel (hidden by default) -->
+      <div id="shadow-settings" class="hidden mb-5 p-4 rounded-xl border border-gray-800" style="background:#1a1a24">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-gray-500 mb-1.5 block uppercase tracking-widest">Stimme</label>
+            <select id="voice-sel"
+                    class="w-full rounded-xl px-3 py-2 text-sm text-gray-200 border border-gray-700
+                           focus:border-indigo-500 focus:outline-none" style="background:#111117">
+              <option value="nova">Nova (weiblich)</option>
+              <option value="alloy">Alloy (neutral)</option>
+              <option value="echo">Echo (männlich)</option>
+              <option value="fable">Fable (britisch)</option>
+              <option value="onyx">Onyx (tief)</option>
+              <option value="shimmer">Shimmer (sanft)</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1.5 block uppercase tracking-widest">Speed</label>
+            <select id="tts-rate"
+                    class="w-full rounded-xl px-3 py-2 text-sm text-gray-200 border border-gray-700
+                           focus:border-indigo-500 focus:outline-none" style="background:#111117">
+              <option value="0.5">0.5×</option>
+              <option value="0.75">0.75×</option>
+              <option value="1" selected>1×</option>
+              <option value="1.25">1.25×</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      <div class="relative flex justify-center items-center mt-2" style="height:56px">
-        <!-- Speed: absolut rechts neben der Mitte -->
-        <div class="absolute flex items-center gap-2"
-             style="right:calc(50% + 36px)">
-          <span class="text-xs text-gray-600">Speed</span>
-          <select id="tts-rate"
-                  class="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs
-                         text-gray-300 focus:outline-none">
-            <option value="0.5">0.5×</option>
-            <option value="0.75">0.75×</option>
-            <option value="1" selected>1×</option>
-            <option value="1.25">1.25×</option>
-          </select>
+      <!-- ── PHASE 1 + 2: Hören & Nachsprechen ── -->
+      <div id="shadow-phase12" class="flex flex-col items-center">
+
+        <!-- Sentence (hidden initially, fades in after TTS) -->
+        <div id="shadow-sentence-wrap"
+             class="text-center mb-6 transition-opacity duration-500 opacity-0 w-full">
+          <p id="shadow-sentence" class="text-2xl font-medium text-gray-100 leading-snug mb-1"></p>
+          <p id="shadow-ipa" class="text-xs text-indigo-400/60 font-mono tracking-wide min-h-[1.2em]"></p>
         </div>
 
-        <!-- Play-Button exakt mittig -->
+        <!-- Play button -->
         <button id="btn-play" onclick="playShadowTTS()"
-                class="w-14 h-14 bg-indigo-600 hover:bg-indigo-500 rounded-full
-                       flex items-center justify-center transition-colors shadow-lg">
+                class="w-16 h-16 bg-indigo-600 hover:bg-indigo-500 rounded-full
+                       flex items-center justify-center transition-colors shadow-lg mb-3">
           <svg id="icon-play" class="w-6 h-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
             <path d="M8 5v14l11-7z"/>
           </svg>
@@ -370,40 +389,70 @@
           </svg>
         </button>
 
-        <div id="waveform" class="hidden absolute items-end gap-0.5 h-8"
-             style="left:calc(50% + 36px)">
+        <!-- Waveform -->
+        <div id="waveform" class="hidden flex items-end gap-0.5 h-5 mb-3">
           <div class="wave-bar w-1.5 bg-indigo-400 rounded-full" style="height:6px"></div>
           <div class="wave-bar w-1.5 bg-indigo-400 rounded-full" style="height:6px"></div>
           <div class="wave-bar w-1.5 bg-indigo-400 rounded-full" style="height:6px"></div>
           <div class="wave-bar w-1.5 bg-indigo-400 rounded-full" style="height:6px"></div>
           <div class="wave-bar w-1.5 bg-indigo-400 rounded-full" style="height:6px"></div>
         </div>
-      </div>
-    </div>
 
-    <!-- Pronunciation check -->
-    <div class="rounded-2xl border border-gray-800 p-5" style="background:#111117">
-      <h3 class="text-sm font-semibold text-gray-300 mb-3">Aussprache-Check</h3>
-      <div class="flex items-center gap-3 mb-4">
-        <button id="btn-record" onclick="toggleRec()"
-                class="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-700
-                       bg-gray-800 hover:bg-gray-700 text-sm font-medium transition-colors">
-          <span id="rec-dot" class="w-2.5 h-2.5 rounded-full bg-rose-500 flex-shrink-0"></span>
-          <span id="rec-label">Aufnehmen</span>
-        </button>
-        <p class="text-xs text-gray-600">Sprich den Satz nach</p>
-      </div>
-      <div id="pron-result" class="hidden rounded-xl p-4" style="background:#1a1a24">
-        <div class="flex items-center justify-between mb-1.5">
-          <span class="text-xs text-gray-500">Erkannt:</span>
-          <span id="pron-score" class="text-sm font-bold text-emerald-400"></span>
-        </div>
-        <p id="pron-text" class="text-sm text-gray-400 italic mb-3"></p>
-        <div class="h-1.5 rounded-full overflow-hidden bg-gray-700">
-          <div id="pron-bar" class="h-full rounded-full transition-all duration-700 bg-emerald-400"
-               style="width:0%"></div>
+        <!-- Record button (appears after TTS) -->
+        <div id="shadow-rec-area" class="hidden w-full mt-2">
+          <button id="btn-record"
+                  onmousedown="startShadowRec(event)" ontouchstart="startShadowRec(event)"
+                  class="w-full py-4 rounded-2xl flex items-center justify-center gap-3
+                         bg-rose-500/10 border border-rose-500/20 text-rose-400
+                         text-sm font-medium transition-colors hover:bg-rose-500/20 select-none">
+            <span id="rec-dot" class="w-2.5 h-2.5 rounded-full bg-rose-500 flex-shrink-0"></span>
+            <span id="rec-label">Halten zum Nachsprechen</span>
+          </button>
         </div>
       </div>
+
+      <!-- ── PHASE 3: Feedback ── -->
+      <div id="shadow-phase3" class="hidden flex-col items-center w-full">
+
+        <!-- Big score -->
+        <div id="pron-score-big" class="text-5xl font-bold tabular-nums mb-1"></div>
+        <div id="pron-score-label" class="text-xs text-gray-500 mb-4"></div>
+
+        <!-- Score bar -->
+        <div class="h-1 rounded-full overflow-hidden w-full mb-4" style="background:#1f1f2b">
+          <div id="pron-bar" class="h-full rounded-full transition-all duration-700" style="width:0%"></div>
+        </div>
+
+        <!-- Word highlighting (delayed) -->
+        <p id="pron-text"
+           class="text-sm text-gray-400 text-center leading-relaxed mb-4
+                  opacity-0 transition-opacity duration-500"></p>
+
+        <!-- Translation reveal -->
+        <p id="shadow-translation" class="text-sm text-indigo-300/70 text-center italic mb-5"></p>
+
+        <!-- Auto-advance -->
+        <div id="shadow-auto-advance" class="hidden text-xs text-emerald-400 text-center mb-3">
+          Weiter in <span id="shadow-auto-countdown">2</span>s
+          <button onclick="cancelShadowAutoAdvance()"
+                  class="ml-2 text-gray-600 hover:text-gray-400 transition-colors">✕</button>
+        </div>
+
+        <!-- Two action buttons -->
+        <div class="grid grid-cols-2 gap-3 w-full">
+          <button onclick="retryShadow()"
+                  class="py-3 rounded-xl text-sm font-medium bg-gray-800 hover:bg-gray-700
+                         text-gray-300 transition-colors">
+            🔄 Nochmal
+          </button>
+          <button onclick="shadowNext()"
+                  class="py-3 rounded-xl text-sm font-medium bg-indigo-600 hover:bg-indigo-500
+                         text-white transition-colors">
+            Weiter →
+          </button>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>

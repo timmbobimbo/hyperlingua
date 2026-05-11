@@ -714,6 +714,7 @@ async function getIPA(sentence, lang) {
 // ── shadowing ─────────────────────────────────────────────────
 let shadow = { islandId:null, sentences:[], idx:0 };
 let ttsPlaying=false;
+let shadowRecActive = false, shadowRecStartTime = 0, shadowAutoTimer = null;
 
 function initShadowSel() {
   const sel = document.getElementById('shadow-island-sel');
@@ -721,7 +722,6 @@ function initShadowSel() {
   sel.innerHTML = '<option value="">– wählen –</option>' +
     islands.map(i=>`<option value="${i.id}">${esc(i.name)} (${(i.sentences||[]).length})</option>`).join('');
   if (shadow.islandId) { sel.value=shadow.islandId; loadShadowIsland(); }
-  else document.getElementById('voice-row').classList.add('hidden');
 }
 
 function loadShadowIsland() {
@@ -729,7 +729,6 @@ function loadShadowIsland() {
   if (!id) {
     document.getElementById('shadow-empty').classList.remove('hidden');
     document.getElementById('shadow-player').classList.add('hidden');
-    document.getElementById('voice-row').classList.add('hidden');
     return;
   }
   const island = DB.islands().find(i=>i.id===id);
@@ -743,25 +742,38 @@ function loadShadowIsland() {
   shadow.islandId=id; shadow.sentences=island.sentences; shadow.idx=0; shadow.ttsLang=island.ttsLang||'en-US';
   document.getElementById('shadow-empty').classList.add('hidden');
   document.getElementById('shadow-player').classList.remove('hidden');
-  document.getElementById('voice-row').classList.remove('hidden');
   renderShadowCard();
 }
 
 function renderShadowCard() {
-  const s=shadow.sentences[shadow.idx];
-  document.getElementById('shadow-sentence').textContent    = s.target;
-  document.getElementById('shadow-translation').textContent = s.native||'';
+  const s = shadow.sentences[shadow.idx];
   document.getElementById('shadow-prog').textContent        = `${shadow.idx+1} / ${shadow.sentences.length}`;
+  document.getElementById('shadow-sentence').textContent    = s.target;
+  document.getElementById('shadow-translation').textContent = s.native || '';
   document.getElementById('shadow-ipa').textContent         = '…';
-  document.getElementById('pron-result').classList.add('hidden');
+
+  document.getElementById('shadow-sentence-wrap').classList.add('opacity-0');
+  document.getElementById('shadow-rec-area').classList.add('hidden');
+  document.getElementById('pron-text').classList.add('opacity-0');
+  document.getElementById('shadow-phase12').classList.remove('hidden');
+  const p3 = document.getElementById('shadow-phase3');
+  p3.classList.add('hidden'); p3.classList.remove('flex');
+  cancelShadowAutoAdvance();
   stopTTS();
-  getIPA(s.target, shadow.ttsLang||'en-US').then(ipa => {
+
+  getIPA(s.target, shadow.ttsLang || 'en-US').then(ipa => {
     document.getElementById('shadow-ipa').textContent = ipa;
+  });
+
+  const rate = parseFloat(document.getElementById('tts-rate').value) || 1;
+  ttsSpeak(s.target, rate, () => {
+    document.getElementById('shadow-sentence-wrap').classList.remove('opacity-0');
+    document.getElementById('shadow-rec-area').classList.remove('hidden');
   });
 }
 
-function shadowNext() { if(shadow.idx<shadow.sentences.length-1){shadow.idx++;renderShadowCard();} }
-function shadowPrev() { if(shadow.idx>0){shadow.idx--;renderShadowCard();} }
+function shadowNext() { cancelShadowAutoAdvance(); if(shadow.idx<shadow.sentences.length-1){shadow.idx++;renderShadowCard();} }
+function shadowPrev() { cancelShadowAutoAdvance(); if(shadow.idx>0){shadow.idx--;renderShadowCard();} }
 
 function stopTTS() {
   if (currentAudio) { currentAudio.pause(); currentAudio = null; }
@@ -772,7 +784,7 @@ function stopTTS() {
   document.getElementById('waveform').classList.add('hidden');
 }
 
-async function ttsSpeak(text, rate = 1) {
+async function ttsSpeak(text, rate = 1, onComplete = null) {
   if (ttsPlaying) { stopTTS(); return; }
   const voice = document.getElementById('voice-sel')?.value || 'nova';
   ttsPlaying = true;
@@ -784,7 +796,7 @@ async function ttsSpeak(text, rate = 1) {
     const bytes = Uint8Array.from(atob(data.audio), c => c.charCodeAt(0));
     const url   = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
     currentAudio = new Audio(url);
-    currentAudio.onended = () => { URL.revokeObjectURL(url); stopTTS(); };
+    currentAudio.onended = () => { URL.revokeObjectURL(url); stopTTS(); if (onComplete) onComplete(); };
     currentAudio.onerror = stopTTS;
     await currentAudio.play();
   } catch(e) {
@@ -800,7 +812,10 @@ function playShadowTTS() {
   if (!island) return;
   const s    = shadow.sentences[shadow.idx];
   const rate = parseFloat(document.getElementById('tts-rate').value) || 1;
-  ttsSpeak(s.target, rate);
+  ttsSpeak(s.target, rate, () => {
+    document.getElementById('shadow-sentence-wrap').classList.remove('opacity-0');
+    document.getElementById('shadow-rec-area').classList.remove('hidden');
+  });
 }
 
 // ── Whisper + Word-Diff ───────────────────────────────────────
@@ -847,26 +862,46 @@ function wordDiffHTML(transcript, target) {
 }
 
 // pronunciation check
-let recActive = false;
-
-async function toggleRec() {
-  if (recActive) { if (mediaRecorder?.state !== 'inactive') mediaRecorder.stop(); return; }
+async function startShadowRec(event) {
+  event?.preventDefault();
+  if (shadowRecActive) return;
 
   const island = DB.islands().find(i => i.id === shadow.islandId);
   const lang   = island?.ttsLang || 'en-US';
   const target = shadow.sentences[shadow.idx].target;
 
-  const uiOn  = () => { document.getElementById('rec-dot').classList.add('animate-pulse'); document.getElementById('rec-label').textContent='Aufnahme läuft…'; document.getElementById('btn-record').style.borderColor='#f87171'; };
-  const uiOff = (lbl='Aufnehmen') => { document.getElementById('rec-dot').classList.remove('animate-pulse'); document.getElementById('rec-label').textContent=lbl; document.getElementById('btn-record').style.borderColor=''; };
+  const uiOn  = () => {
+    document.getElementById('rec-dot').classList.add('animate-pulse');
+    document.getElementById('rec-label').textContent = 'Aufnahme läuft…';
+    document.getElementById('btn-record').classList.add('bg-rose-500/20');
+  };
+  const uiOff = (lbl = 'Halten zum Nachsprechen') => {
+    document.getElementById('rec-dot').classList.remove('animate-pulse');
+    document.getElementById('rec-label').textContent = lbl;
+    document.getElementById('btn-record').classList.remove('bg-rose-500/20');
+  };
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     audioChunks   = [];
     mediaRecorder = new MediaRecorder(stream);
     mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
-    mediaRecorder.onstart = () => { recActive = true; uiOn(); };
-    mediaRecorder.onstop  = async () => {
-      recActive = false; stream.getTracks().forEach(t => t.stop()); uiOff('Analysiere…');
+    mediaRecorder.onstart = () => {
+      shadowRecActive = true;
+      shadowRecStartTime = Date.now();
+      uiOn();
+      const stopFn = () => {
+        stopShadowRec();
+        document.removeEventListener('mouseup', stopFn);
+        document.removeEventListener('touchend', stopFn);
+      };
+      document.addEventListener('mouseup', stopFn);
+      document.addEventListener('touchend', stopFn);
+    };
+    mediaRecorder.onstop = async () => {
+      shadowRecActive = false;
+      stream.getTracks().forEach(t => t.stop());
+      uiOff('Analysiere…');
       try {
         const blob   = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
         const result = await azurePronounce(blob, lang, target);
@@ -874,15 +909,27 @@ async function toggleRec() {
         else {
           const transcript = await whisperTranscribe(blob, lang);
           if (transcript) { const r = wordDiffHTML(transcript, target); showPronResult(r.html, r.score); }
+          else uiOff();
         }
       } catch(e) {
         if (e.message !== 'not_logged_in' && e.message !== 'credits_exhausted') alert('Fehler: ' + e.message);
-      } finally { uiOff(); }
+        uiOff();
+      }
     };
     mediaRecorder.start();
   } catch(e) {
     if (e.name === 'NotAllowedError') alert('Mikrofon-Zugriff verweigert.');
     else alert('Aufnahme-Fehler: ' + e.message);
+  }
+}
+
+function stopShadowRec() {
+  if (!shadowRecActive || !mediaRecorder || mediaRecorder.state === 'inactive') return;
+  const elapsed = Date.now() - shadowRecStartTime;
+  if (elapsed < 400) {
+    setTimeout(() => { if (shadowRecActive) mediaRecorder.stop(); }, 400 - elapsed);
+  } else {
+    mediaRecorder.stop();
   }
 }
 
@@ -904,20 +951,63 @@ function lev(a,b){
   return dp[m][n];
 }
 function showPronResult(html, score) {
-  let label, barCls;
-  if      (score >= 80) { label = `${score}% – Ausgezeichnet! 🎉`; barCls = 'bg-emerald-400'; }
-  else if (score >= 60) { label = `${score}% – Gut! 👍`;           barCls = 'bg-indigo-400'; }
-  else if (score >= 40) { label = `${score}% – Üb weiter 💪`;      barCls = 'bg-amber-400'; }
-  else                  { label = `${score}% – Nochmal`;            barCls = 'bg-rose-400'; }
-  document.getElementById('pron-result').classList.remove('hidden');
-  document.getElementById('pron-text').innerHTML = html;
-  const sc = document.getElementById('pron-score');
-  sc.textContent = label;
-  sc.className = 'text-sm font-bold ' + (score>=80?'text-emerald-400':score>=60?'text-indigo-400':score>=40?'text-amber-400':'text-rose-400');
+  let label, barColor, scoreClass;
+  if      (score >= 85) { label = 'Ausgezeichnet! 🎉'; barColor = '#34d399'; scoreClass = 'text-emerald-400'; }
+  else if (score >= 65) { label = 'Gut! 👍';           barColor = '#818cf8'; scoreClass = 'text-indigo-400'; }
+  else if (score >= 40) { label = 'Üb weiter 💪';      barColor = '#fbbf24'; scoreClass = 'text-amber-400'; }
+  else                  { label = 'Nochmal';            barColor = '#f87171'; scoreClass = 'text-rose-400'; }
+
+  document.getElementById('shadow-phase12').classList.add('hidden');
+  const p3 = document.getElementById('shadow-phase3');
+  p3.classList.remove('hidden'); p3.classList.add('flex');
+
+  const scoreBig = document.getElementById('pron-score-big');
+  scoreBig.textContent = score + '%';
+  scoreBig.className = 'text-5xl font-bold tabular-nums mb-1 ' + scoreClass;
+  document.getElementById('pron-score-label').textContent = label;
+
   const bar = document.getElementById('pron-bar');
-  bar.className = 'h-full rounded-full transition-all duration-700 ' + barCls;
+  bar.style.backgroundColor = barColor;
   bar.style.width = '0%';
   setTimeout(() => bar.style.width = score + '%', 50);
+
+  const pText = document.getElementById('pron-text');
+  pText.innerHTML = html;
+  pText.classList.add('opacity-0');
+  setTimeout(() => pText.classList.remove('opacity-0'), 400);
+
+  if (score >= 85) {
+    let secs = 2;
+    document.getElementById('shadow-auto-advance').classList.remove('hidden');
+    document.getElementById('shadow-auto-countdown').textContent = secs;
+    shadowAutoTimer = setInterval(() => {
+      secs--;
+      if (secs <= 0) { cancelShadowAutoAdvance(); shadowNext(); }
+      else document.getElementById('shadow-auto-countdown').textContent = secs;
+    }, 1000);
+  }
+}
+
+function retryShadow() {
+  cancelShadowAutoAdvance();
+  const p3 = document.getElementById('shadow-phase3');
+  p3.classList.add('hidden'); p3.classList.remove('flex');
+  document.getElementById('shadow-phase12').classList.remove('hidden');
+  document.getElementById('shadow-sentence-wrap').classList.remove('opacity-0');
+  document.getElementById('shadow-rec-area').classList.remove('hidden');
+  document.getElementById('rec-dot').classList.remove('animate-pulse');
+  document.getElementById('rec-label').textContent = 'Halten zum Nachsprechen';
+  document.getElementById('btn-record').classList.remove('bg-rose-500/20');
+}
+
+function cancelShadowAutoAdvance() {
+  if (shadowAutoTimer) { clearInterval(shadowAutoTimer); shadowAutoTimer = null; }
+  const el = document.getElementById('shadow-auto-advance');
+  if (el) el.classList.add('hidden');
+}
+
+function toggleShadowSettings() {
+  document.getElementById('shadow-settings').classList.toggle('hidden');
 }
 
 // ── SRS Review Session ────────────────────────────────────────
