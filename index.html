@@ -552,108 +552,107 @@
       <span id="srs-card-island" class="text-xs text-gray-700"></span>
     </div>
 
-    <!-- Flip card -->
-    <div class="flip-scene mb-4" style="height:min(370px,52vh)">
-      <div id="srs-flip" class="flip-card h-full">
+    <!-- Review card (two-phase, no flip) -->
+    <div id="srs-card" class="rounded-2xl border border-gray-800 p-6 flex flex-col mb-4"
+         style="background:#111117; min-height:min(370px,52vh)">
 
-        <!-- ── FRONT ── -->
-        <div class="flip-face rounded-2xl border border-gray-800 p-6 flex flex-col
-                    items-center" style="background:#111117">
-          <!-- Hint + sentence -->
-          <p id="srs-front-hint" class="text-xs text-gray-600 uppercase tracking-widest mb-3 mt-2"></p>
-          <p id="srs-front-text" class="text-2xl font-medium text-center text-gray-100
-                                        leading-snug mb-5 flex-1 flex items-center"></p>
+      <!-- ── PHASE 1: Frage + Sprechen ── -->
+      <div id="srs-phase1" class="flex flex-col items-center flex-1">
+        <p id="srs-front-hint" class="text-xs text-gray-600 uppercase tracking-widest mb-3 mt-2"></p>
+        <p id="srs-front-text" class="text-2xl font-medium text-center text-gray-100
+                                      leading-snug mb-6 flex-1 flex items-center"></p>
 
-          <!-- Speech area -->
-          <div class="w-full mb-3">
-            <!-- Idle / recording state -->
-            <div id="srs-speech-idle" class="flex flex-col items-center gap-2">
-              <button id="srs-mic-btn" onclick="startSRSSpeech()"
-                      class="flex items-center gap-2 px-5 py-2.5 rounded-xl
-                             bg-rose-500/15 border border-rose-500/30 text-rose-400
-                             text-sm font-medium transition-colors hover:bg-rose-500/25">
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4
-                       m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
-                </svg>
-                <span id="srs-mic-label">Jetzt sprechen</span>
-              </button>
-              <button onclick="skipSRSSpeech()"
-                      class="text-xs text-gray-600 hover:text-gray-400 transition-colors">
-                Überspringen →
-              </button>
-            </div>
-            <!-- Recognition result -->
-            <div id="srs-speech-result" class="hidden rounded-xl p-3" style="background:#1a1a24">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-xs text-gray-500">Erkannt:</span>
-                <span id="srs-speech-score" class="text-xs font-bold"></span>
-              </div>
-              <p id="srs-speech-text" class="text-xs text-gray-400 mb-2 leading-relaxed"></p>
-              <div class="h-1 rounded-full bg-gray-700 overflow-hidden">
-                <div id="srs-speech-bar"
-                     class="h-full rounded-full transition-all duration-700 bg-emerald-400"
-                     style="width:0%"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Auflösen button – disabled until speech done -->
-          <button id="srs-reveal-btn" onclick="flipSRSCard()" disabled
-                  class="w-full py-2.5 rounded-xl text-sm font-medium
-                         bg-gray-800 text-gray-600 cursor-not-allowed transition-colors">
-            Auflösen
+        <!-- Idle: push-to-talk -->
+        <div id="srs-speech-idle" class="flex flex-col items-center gap-2 w-full">
+          <button id="srs-mic-btn"
+                  onmousedown="startSRSSpeech(event)" ontouchstart="startSRSSpeech(event)"
+                  class="flex items-center gap-2 px-6 py-3 rounded-xl select-none
+                         bg-rose-500/15 border border-rose-500/30 text-rose-400
+                         text-sm font-medium transition-colors hover:bg-rose-500/25">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4
+                   m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+            </svg>
+            <span id="srs-mic-label">Halten zum Sprechen</span>
+          </button>
+          <button onclick="skipSRSSpeech()"
+                  class="text-xs text-gray-600 hover:text-gray-400 transition-colors">
+            Überspringen →
           </button>
         </div>
 
-        <!-- ── BACK ── -->
-        <div class="flip-face flip-back rounded-2xl border border-indigo-500/20 p-6 flex flex-col
-                    items-center" style="background:#111117">
-          <!-- Translation -->
-          <div class="flex-1 flex items-center justify-center w-full">
-            <p id="srs-back-text"
-               class="text-xl font-medium text-center text-indigo-300 leading-snug"></p>
+        <!-- Recording indicator -->
+        <div id="srs-recording-indicator" class="hidden flex-col items-center gap-1">
+          <div class="flex items-center gap-2 text-rose-400 text-sm font-medium">
+            <div class="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></div>
+            Aufnahme läuft…
           </div>
+          <div class="text-xs text-gray-600">Loslassen zum Stoppen</div>
+        </div>
 
-          <!-- TTS indicator (visible while playing) -->
-          <div id="srs-tts-indicator"
-               class="flex items-center gap-2 text-xs text-gray-500 mb-3">
-            <div class="flex items-end gap-0.5 h-4">
-              <div class="wave-bar w-1 bg-indigo-400 rounded-full" style="height:4px"></div>
-              <div class="wave-bar w-1 bg-indigo-400 rounded-full" style="height:4px"></div>
-              <div class="wave-bar w-1 bg-indigo-400 rounded-full" style="height:4px"></div>
-              <div class="wave-bar w-1 bg-indigo-400 rounded-full" style="height:4px"></div>
-            </div>
-            Wird vorgelesen…
+        <!-- Analyzing indicator -->
+        <div id="srs-analyzing" class="hidden text-xs text-gray-500">Analysiere…</div>
+      </div>
+
+      <!-- ── PHASE 2: Feedback + Bewertung ── -->
+      <div id="srs-phase2" class="hidden flex-col w-full flex-1">
+        <!-- Original question (smaller) -->
+        <p id="srs-result-hint" class="text-xs text-gray-600 uppercase tracking-widest mb-1"></p>
+        <p id="srs-result-front" class="text-base font-medium text-center text-gray-400 leading-snug mb-3"></p>
+
+        <!-- Speech result (hidden if skipped) -->
+        <div id="srs-speech-result" class="hidden rounded-xl p-3 mb-3" style="background:#1a1a24">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs text-gray-500">Erkannt:</span>
+            <span id="srs-speech-score" class="text-xs font-bold"></span>
           </div>
-
-          <!-- Rating buttons – hidden until TTS finishes -->
-          <div id="srs-rating-btns" class="hidden grid grid-cols-4 gap-2 w-full">
-            <button onclick="rateSRS(0)"
-                    class="btn-again rounded-xl py-3 text-center transition-colors">
-              <div class="text-xs font-bold mb-0.5">Nochmal</div>
-              <div id="lbl-again" class="text-xs opacity-70">&lt; 1 Min</div>
-            </button>
-            <button onclick="rateSRS(1)"
-                    class="btn-hard rounded-xl py-3 text-center transition-colors">
-              <div class="text-xs font-bold mb-0.5">Schwer</div>
-              <div id="lbl-hard" class="text-xs opacity-70">–</div>
-            </button>
-            <button onclick="rateSRS(2)"
-                    class="btn-good rounded-xl py-3 text-center transition-colors">
-              <div class="text-xs font-bold mb-0.5">Gut</div>
-              <div id="lbl-good" class="text-xs opacity-70">–</div>
-            </button>
-            <button onclick="rateSRS(3)"
-                    class="btn-easy rounded-xl py-3 text-center transition-colors">
-              <div class="text-xs font-bold mb-0.5">Einfach</div>
-              <div id="lbl-easy" class="text-xs opacity-70">–</div>
-            </button>
+          <p id="srs-speech-text" class="text-xs text-gray-400 mb-2 leading-relaxed"></p>
+          <div class="h-1 rounded-full bg-gray-700 overflow-hidden">
+            <div id="srs-speech-bar" class="h-full rounded-full transition-all duration-700"
+                 style="width:0%"></div>
           </div>
         </div>
 
+        <!-- Translation -->
+        <p id="srs-back-text"
+           class="text-xl font-medium text-center text-indigo-300 leading-snug mb-4 flex-1 flex items-center justify-center"></p>
+
+        <!-- Auto-advance indicator (≥90%) -->
+        <div id="srs-auto-advance" class="hidden text-center text-xs text-emerald-400 mb-2">
+          Weiter in <span id="srs-auto-countdown">3</span>s
+          <button onclick="cancelAutoAdvance()"
+                  class="ml-2 text-gray-600 hover:text-gray-400 transition-colors">✕</button>
+        </div>
+
+        <!-- Retry button -->
+        <button onclick="retrySRSSpeech()"
+                class="w-full py-2 rounded-xl text-sm text-gray-500 border border-gray-800
+                       hover:border-gray-600 hover:text-gray-300 mb-3 transition-colors">
+          🎤 Nochmal versuchen
+        </button>
+
+        <!-- Rating buttons -->
+        <div id="srs-rating-btns" class="grid grid-cols-4 gap-2 w-full">
+          <button onclick="rateSRS(0)" class="btn-again rounded-xl py-3 text-center transition-colors">
+            <div class="text-xs font-bold mb-0.5">Nochmal</div>
+            <div id="lbl-again" class="text-xs opacity-70">&lt; 1 Min</div>
+          </button>
+          <button onclick="rateSRS(1)" class="btn-hard rounded-xl py-3 text-center transition-colors">
+            <div class="text-xs font-bold mb-0.5">Schwer</div>
+            <div id="lbl-hard" class="text-xs opacity-70">–</div>
+          </button>
+          <button onclick="rateSRS(2)" class="btn-good rounded-xl py-3 text-center transition-colors">
+            <div class="text-xs font-bold mb-0.5">Gut</div>
+            <div id="lbl-good" class="text-xs opacity-70">–</div>
+          </button>
+          <button onclick="rateSRS(3)" class="btn-easy rounded-xl py-3 text-center transition-colors">
+            <div class="text-xs font-bold mb-0.5">Einfach</div>
+            <div id="lbl-easy" class="text-xs opacity-70">–</div>
+          </button>
+        </div>
       </div>
+
     </div>
 
     <!-- Mini stats row -->
@@ -2099,26 +2098,23 @@ function loadNextSRSCard() {
 
   // Stop any running TTS / recognition from previous card
   window.speechSynthesis && window.speechSynthesis.cancel();
+  cancelAutoAdvance();
   if (srsRecActive && mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
 
-  // Reset flip
-  document.getElementById('srs-flip').classList.remove('flipped');
+  // Reset to phase 1
+  const p1 = document.getElementById('srs-phase1');
+  const p2 = document.getElementById('srs-phase2');
+  p1.classList.remove('hidden'); p1.classList.add('flex');
+  p2.classList.add('hidden');    p2.classList.remove('flex');
 
-  // Reset speech UI
   document.getElementById('srs-speech-idle').classList.remove('hidden');
-  document.getElementById('srs-speech-result').classList.add('hidden');
-  document.getElementById('srs-mic-label').textContent = 'Jetzt sprechen';
+  document.getElementById('srs-recording-indicator').classList.add('hidden');
+  document.getElementById('srs-recording-indicator').classList.remove('flex');
+  document.getElementById('srs-analyzing').classList.add('hidden');
+  document.getElementById('srs-mic-label').textContent = 'Halten zum Sprechen';
   document.getElementById('srs-mic-btn').classList.remove('animate-pulse');
-
-  // Reset reveal button → disabled
-  const revealBtn = document.getElementById('srs-reveal-btn');
-  revealBtn.disabled  = true;
-  revealBtn.className = 'w-full py-2.5 rounded-xl text-sm font-medium ' +
-                        'bg-gray-800 text-gray-600 cursor-not-allowed transition-colors';
-
-  // Reset back face: hide rating buttons, hide TTS indicator
-  document.getElementById('srs-rating-btns').classList.add('hidden');
-  document.getElementById('srs-tts-indicator').classList.add('hidden');
+  document.getElementById('srs-speech-result').classList.add('hidden');
+  document.getElementById('srs-auto-advance').classList.add('hidden');
 
   // Populate front
   const srs = sent.srs || SRS0;
@@ -2126,9 +2122,11 @@ function loadNextSRSCard() {
   const back  = entry.dir==='target' ? (sent.native||'–') : sent.target;
   const hint  = entry.dir==='target' ? 'Was bedeutet das?' : 'Wie heißt das?';
 
-  document.getElementById('srs-front-hint').textContent = hint;
-  document.getElementById('srs-front-text').textContent = front;
-  document.getElementById('srs-back-text').textContent  = back;
+  document.getElementById('srs-front-hint').textContent   = hint;
+  document.getElementById('srs-front-text').textContent   = front;
+  document.getElementById('srs-result-hint').textContent  = hint;
+  document.getElementById('srs-result-front').textContent = front;
+  document.getElementById('srs-back-text').textContent    = back;
 
   // Card type badge
   const stLabel = (srs.state==='new')?'Neu':(srs.state==='learning')?'Lernen':'Wiederholung';
@@ -2151,24 +2149,49 @@ function loadNextSRSCard() {
 
 // ── SRS speech recognition ───────────────────────────────────
 let srsRecActive = false;
+let srsAutoTimer = null;
+let srsRecStartTime = 0;
 
-async function startSRSSpeech() {
-  if (srsRecActive) { if (mediaRecorder?.state !== 'inactive') mediaRecorder.stop(); return; }
+async function startSRSSpeech(e) {
+  e?.preventDefault();
+  if (srsRecActive) return;
 
   const { island, sent } = srsQ.current;
   const lang = island.ttsLang || 'en-US';
 
-  const uiOn  = () => { document.getElementById('srs-mic-label').textContent='Aufnahme läuft…'; document.getElementById('srs-mic-btn').classList.add('animate-pulse'); document.getElementById('srs-reveal-btn').classList.add('hidden'); };
-  const uiOff = (lbl='Jetzt sprechen') => { document.getElementById('srs-mic-btn').classList.remove('animate-pulse'); document.getElementById('srs-mic-label').textContent=lbl; document.getElementById('srs-reveal-btn').classList.remove('hidden'); };
+  const showRecording = () => {
+    document.getElementById('srs-speech-idle').classList.add('hidden');
+    document.getElementById('srs-recording-indicator').classList.remove('hidden');
+    document.getElementById('srs-recording-indicator').classList.add('flex');
+  };
+  const showAnalyzing = () => {
+    document.getElementById('srs-recording-indicator').classList.add('hidden');
+    document.getElementById('srs-recording-indicator').classList.remove('flex');
+    document.getElementById('srs-analyzing').classList.remove('hidden');
+  };
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     audioChunks   = [];
     mediaRecorder = new MediaRecorder(stream);
     mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
-    mediaRecorder.onstart = () => { srsRecActive = true; uiOn(); };
-    mediaRecorder.onstop  = async () => {
-      srsRecActive = false; stream.getTracks().forEach(t => t.stop()); uiOff('Analysiere…');
+    mediaRecorder.onstart = () => {
+      srsRecActive = true;
+      srsRecStartTime = Date.now();
+      showRecording();
+      // document-level stop on mouseup / touchend
+      const stopFn = () => {
+        stopSRSSpeech();
+        document.removeEventListener('mouseup', stopFn);
+        document.removeEventListener('touchend', stopFn);
+      };
+      document.addEventListener('mouseup', stopFn);
+      document.addEventListener('touchend', stopFn);
+    };
+    mediaRecorder.onstop = async () => {
+      srsRecActive = false;
+      stream.getTracks().forEach(t => t.stop());
+      showAnalyzing();
       try {
         const blob   = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
         const result = await azurePronounce(blob, lang, sent.target);
@@ -2176,27 +2199,34 @@ async function startSRSSpeech() {
         else {
           const transcript = await whisperTranscribe(blob, lang);
           if (transcript) { const r = wordDiffHTML(transcript, sent.target); showSRSSpeechResult(r.html, r.score); }
-          else skipSRSSpeech();
+          else showPhase2();
         }
-      } catch(e) { skipSRSSpeech(); }
-      finally { uiOff(); }
+      } catch(e) { showPhase2(); }
     };
     mediaRecorder.start();
   } catch(e) {
     if (e.name === 'NotAllowedError') alert('Mikrofon-Zugriff verweigert.');
-    else skipSRSSpeech();
+    else showPhase2();
+  }
+}
+
+function stopSRSSpeech() {
+  if (!srsRecActive || !mediaRecorder || mediaRecorder.state === 'inactive') return;
+  const elapsed = Date.now() - srsRecStartTime;
+  if (elapsed < 400) {
+    setTimeout(() => { if (srsRecActive) mediaRecorder.stop(); }, 400 - elapsed);
+  } else {
+    mediaRecorder.stop();
   }
 }
 
 function showSRSSpeechResult(html, score) {
-  document.getElementById('srs-speech-idle').classList.add('hidden');
-  document.getElementById('srs-speech-result').classList.remove('hidden');
   document.getElementById('srs-speech-text').innerHTML = html;
 
   let label, color;
-  if      (score >= 80) { label = score + '% – Top! 🎉';       color = '#34d399'; }
-  else if (score >= 60) { label = score + '% – Gut 👍';         color = '#818cf8'; }
-  else if (score >= 40) { label = score + '% – Weiter üben 💪'; color = '#fbbf24'; }
+  if      (score >= 90) { label = score + '% – Top! 🎉';       color = '#34d399'; }
+  else if (score >= 70) { label = score + '% – Gut 👍';         color = '#818cf8'; }
+  else if (score >= 45) { label = score + '% – Weiter üben 💪'; color = '#fbbf24'; }
   else                  { label = score + '% – Nochmal';         color = '#f87171'; }
 
   const sc = document.getElementById('srs-speech-score');
@@ -2208,50 +2238,51 @@ function showSRSSpeechResult(html, score) {
   bar.style.width = '0%';
   setTimeout(() => bar.style.width = score + '%', 50);
 
-  enableRevealBtn();
+  showPhase2(true);
+
+  // Auto-advance at ≥90%
+  if (score >= 90) {
+    let secs = 3;
+    document.getElementById('srs-auto-advance').classList.remove('hidden');
+    document.getElementById('srs-auto-countdown').textContent = secs;
+    srsAutoTimer = setInterval(() => {
+      secs--;
+      if (secs <= 0) { cancelAutoAdvance(); rateSRS(2); }
+      else document.getElementById('srs-auto-countdown').textContent = secs;
+    }, 1000);
+  }
+}
+
+function showPhase2(withResult = false) {
+  document.getElementById('srs-analyzing').classList.add('hidden');
+  const p1 = document.getElementById('srs-phase1');
+  const p2 = document.getElementById('srs-phase2');
+  p1.classList.add('hidden');    p1.classList.remove('flex');
+  p2.classList.remove('hidden'); p2.classList.add('flex');
+  if (withResult) document.getElementById('srs-speech-result').classList.remove('hidden');
+  srsQ.flipped = true;
 }
 
 function skipSRSSpeech() {
-  document.getElementById('srs-speech-idle').classList.add('hidden');
+  showPhase2(false);
+}
+
+function retrySRSSpeech() {
+  cancelAutoAdvance();
+  const p1 = document.getElementById('srs-phase1');
+  const p2 = document.getElementById('srs-phase2');
+  p2.classList.add('hidden');    p2.classList.remove('flex');
+  p1.classList.remove('hidden'); p1.classList.add('flex');
+  document.getElementById('srs-speech-idle').classList.remove('hidden');
   document.getElementById('srs-speech-result').classList.add('hidden');
-  enableRevealBtn();
+  document.getElementById('srs-analyzing').classList.add('hidden');
+  srsQ.flipped = false;
 }
 
-function enableRevealBtn() {
-  const btn = document.getElementById('srs-reveal-btn');
-  btn.disabled  = false;
-  btn.className = 'w-full py-2.5 rounded-xl text-sm font-medium ' +
-                  'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer transition-colors';
-}
-
-function flipSRSCard() {
-  if (srsQ.flipped) return;
-  // Stop any running recognition
-  if (srsRecActive && mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-
-  document.getElementById('srs-flip').classList.add('flipped');
-  srsQ.flipped = true;
-
-  // Show TTS indicator, hide rating buttons
-  document.getElementById('srs-tts-indicator').classList.remove('hidden');
-  document.getElementById('srs-rating-btns').classList.add('hidden');
-
-  // Auto-play TTS of the TARGET sentence
-  const { island, sent } = srsQ.current;
-  const showRating = () => {
-    document.getElementById('srs-tts-indicator').classList.add('hidden');
-    document.getElementById('srs-rating-btns').classList.remove('hidden');
-  };
-  const voice = document.getElementById('srs-voice-sel')?.value || 'nova';
-  callProxy('tts', { text: sent.target, voice, speed: 1 })
-    .then(data => {
-      const bytes = Uint8Array.from(atob(data.audio), c => c.charCodeAt(0));
-      const url   = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
-      const audio = new Audio(url);
-      audio.onended = () => { URL.revokeObjectURL(url); showRating(); };
-      audio.onerror = showRating;
-      audio.play();
-    }).catch(showRating);
+function cancelAutoAdvance() {
+  if (srsAutoTimer) { clearInterval(srsAutoTimer); srsAutoTimer = null; }
+  const el = document.getElementById('srs-auto-advance');
+  if (el) el.classList.add('hidden');
 }
 
 function rateSRS(rating) {
@@ -2424,7 +2455,8 @@ document.addEventListener('keydown', e => {
   if(e.code==='Space'&&!['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)){
     if(currentView==='shadowing'&&shadow.islandId){e.preventDefault();playShadowTTS();}
     if(currentView==='recall'&&document.getElementById('srs-session').offsetParent){
-      e.preventDefault(); flipSRSCard();
+      e.preventDefault();
+      if (!srsQ.flipped) startSRSSpeech();
     }
   }
   if(currentView==='shadowing'){
