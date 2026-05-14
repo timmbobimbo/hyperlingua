@@ -18,94 +18,130 @@
       <li><a href="faq.html">FAQ</a></li>
       <li><a href="contact.html" class="active">Kontakt</a></li>
     </ul>
-    <a href="app/" class="btn-primary">App starten →</a>
+    <div class="nav-right">
+      <a href="app/" class="btn-primary nav-cta">App starten →</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Menü" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
   </div>
 </nav>
 
-<main style="padding-top:5rem">
-  <div class="container" style="max-width:680px;padding:3rem 1.5rem">
+<div class="nav-mobile" id="navMobile" aria-hidden="true">
+  <a href="index.html">Home</a>
+  <a href="changelog.html">Changelog</a>
+  <a href="faq.html">FAQ</a>
+  <a href="contact.html" class="active">Kontakt</a>
+  <a href="app/" class="nav-mobile__cta">App starten →</a>
+</div>
 
-    <h1 style="font-size:2.25rem;font-weight:800;margin-bottom:0.5rem">Kontakt & Feedback</h1>
-    <p style="color:#94a3b8;margin-bottom:3rem">
-      Ideen, Fehler, Verbesserungsvorschläge — alles willkommen.
-    </p>
-
-    <!-- GitHub Issues -->
-    <div class="card" style="margin-bottom:1.25rem">
-      <div style="display:flex;align-items:flex-start;gap:1rem">
-        <div style="font-size:1.75rem;flex-shrink:0">🐛</div>
-        <div>
-          <div class="feature-title" style="margin-bottom:0.35rem">Bug melden</div>
-          <div class="feature-desc" style="margin-bottom:1rem">
-            Etwas funktioniert nicht? Erstelle ein GitHub Issue — mit Screenshot oder Schritten zur Reproduktion.
-          </div>
-          <a href="https://github.com/timmbobimbo/hyperlingua/issues/new?labels=bug&title=[Bug]+"
-             target="_blank" rel="noopener" class="btn-primary" style="font-size:0.85rem">
-            Bug melden auf GitHub →
-          </a>
-        </div>
-      </div>
+<main>
+  <div class="container" style="max-width:680px">
+    <div class="page-header">
+      <h1>Kontakt & Feedback</h1>
+      <p>Ideen, Fehler, Verbesserungsvorschläge — alles willkommen.</p>
     </div>
 
-    <div class="card" style="margin-bottom:1.25rem">
-      <div style="display:flex;align-items:flex-start;gap:1rem">
-        <div style="font-size:1.75rem;flex-shrink:0">💡</div>
-        <div>
-          <div class="feature-title" style="margin-bottom:0.35rem">Feature-Idee</div>
-          <div class="feature-desc" style="margin-bottom:1rem">
-            Du hast eine Idee wie HyperLingua besser werden kann? Teile sie als Feature-Request.
+    <div style="padding:0 1.5rem 4rem;display:flex;flex-direction:column;gap:1.25rem">
+
+      <div class="card">
+        <div class="contact-card">
+          <div class="contact-icon">🐛</div>
+          <div>
+            <div class="feature-title" style="margin-bottom:0.35rem">Bug melden</div>
+            <div class="feature-desc" style="margin-bottom:1rem">
+              Etwas funktioniert nicht? Erstelle ein GitHub Issue — mit Screenshot oder Schritten zur Reproduktion.
+            </div>
+            <a href="https://github.com/timmbobimbo/hyperlingua/issues/new?labels=bug&title=[Bug]+"
+               target="_blank" rel="noopener" class="btn-primary" style="font-size:0.85rem">
+              Bug melden auf GitHub →
+            </a>
           </div>
-          <a href="https://github.com/timmbobimbo/hyperlingua/issues/new?labels=enhancement&title=[Feature]+"
-             target="_blank" rel="noopener" class="btn-primary" style="font-size:0.85rem">
-            Idee einreichen →
-          </a>
         </div>
       </div>
-    </div>
 
-    <div class="card" style="margin-bottom:1.25rem">
-      <div style="display:flex;align-items:flex-start;gap:1rem">
-        <div style="font-size:1.75rem;flex-shrink:0">✉️</div>
-        <div>
-          <div class="feature-title" style="margin-bottom:0.35rem">Direkte Nachricht</div>
-          <div class="feature-desc" style="margin-bottom:1rem">
-            Für alles andere: einfach eine E-Mail schreiben.
+      <div class="card">
+        <div class="contact-card">
+          <div class="contact-icon">💡</div>
+          <div>
+            <div class="feature-title" style="margin-bottom:0.35rem">Feature-Idee</div>
+            <div class="feature-desc" style="margin-bottom:1rem">
+              Du hast eine Idee wie HyperLingua besser werden kann? Teile sie als Feature-Request.
+            </div>
+            <a href="https://github.com/timmbobimbo/hyperlingua/issues/new?labels=enhancement&title=[Feature]+"
+               target="_blank" rel="noopener" class="btn-primary" style="font-size:0.85rem">
+              Idee einreichen →
+            </a>
           </div>
-          <a href="mailto:brockerhoff_timm@icloud.com" class="btn-primary" style="font-size:0.85rem">
-            E-Mail schreiben →
-          </a>
         </div>
       </div>
-    </div>
 
-    <div class="card">
-      <div style="display:flex;align-items:flex-start;gap:1rem">
-        <div style="font-size:1.75rem;flex-shrink:0">📋</div>
-        <div>
-          <div class="feature-title" style="margin-bottom:0.35rem">Alle offenen Issues</div>
-          <div class="feature-desc" style="margin-bottom:1rem">
-            Schau ob deine Idee oder dein Bug bereits bekannt ist.
+      <div class="card">
+        <div class="contact-card">
+          <div class="contact-icon">✉️</div>
+          <div>
+            <div class="feature-title" style="margin-bottom:0.35rem">Direkte Nachricht</div>
+            <div class="feature-desc" style="margin-bottom:1rem">
+              Für alles andere: einfach eine E-Mail schreiben.
+            </div>
+            <a href="mailto:brockerhoff_timm@icloud.com" class="btn-primary" style="font-size:0.85rem">
+              E-Mail schreiben →
+            </a>
           </div>
-          <a href="https://github.com/timmbobimbo/hyperlingua/issues"
-             target="_blank" rel="noopener" class="btn-primary" style="font-size:0.85rem;background:rgba(99,102,241,0.15);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3)">
-            Issues ansehen →
-          </a>
         </div>
       </div>
-    </div>
 
+      <div class="card">
+        <div class="contact-card">
+          <div class="contact-icon">📋</div>
+          <div>
+            <div class="feature-title" style="margin-bottom:0.35rem">Alle offenen Issues</div>
+            <div class="feature-desc" style="margin-bottom:1rem">
+              Schau ob deine Idee oder dein Bug bereits bekannt ist.
+            </div>
+            <a href="https://github.com/timmbobimbo/hyperlingua/issues"
+               target="_blank" rel="noopener" class="btn-ghost" style="font-size:0.85rem">
+              Issues ansehen →
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </div>
   </div>
 </main>
 
 <footer class="site-footer">
-  <div style="margin-bottom:0.5rem">
-    <a href="index.html">Home</a> ·
-    <a href="changelog.html">Changelog</a> ·
-    <a href="faq.html">FAQ</a> ·
+  <div class="site-footer__links">
+    <a href="index.html">Home</a>
+    <a href="changelog.html">Changelog</a>
+    <a href="faq.html">FAQ</a>
     <a href="https://github.com/timmbobimbo/hyperlingua" target="_blank" rel="noopener">GitHub</a>
   </div>
   <div>© 2026 HyperLingua</div>
 </footer>
+
+<script>
+(function(){
+  var t=document.getElementById('navToggle'),m=document.getElementById('navMobile');
+  function close(){
+    m.classList.remove('open');t.classList.remove('open');
+    t.setAttribute('aria-expanded','false');m.setAttribute('aria-hidden','true');
+    document.body.style.overflow='';
+  }
+  t.addEventListener('click',function(){
+    var isOpen=m.classList.contains('open');
+    if(isOpen){close();}
+    else{
+      m.classList.add('open');t.classList.add('open');
+      t.setAttribute('aria-expanded','true');m.setAttribute('aria-hidden','false');
+      document.body.style.overflow='hidden';
+    }
+  });
+  m.querySelectorAll('a').forEach(function(a){a.addEventListener('click',close);});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+})();
+</script>
 
 </body>
 </html>

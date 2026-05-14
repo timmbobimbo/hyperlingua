@@ -18,9 +18,22 @@
       <li><a href="faq.html">FAQ</a></li>
       <li><a href="contact.html">Kontakt</a></li>
     </ul>
-    <a href="app/" class="btn-primary">App starten →</a>
+    <div class="nav-right">
+      <a href="app/" class="btn-primary nav-cta">App starten →</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Menü" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
   </div>
 </nav>
+
+<div class="nav-mobile" id="navMobile" aria-hidden="true">
+  <a href="index.html" class="active">Home</a>
+  <a href="changelog.html">Changelog</a>
+  <a href="faq.html">FAQ</a>
+  <a href="contact.html">Kontakt</a>
+  <a href="app/" class="nav-mobile__cta">App starten →</a>
+</div>
 
 <main>
 
@@ -32,13 +45,13 @@
       HyperLingua kombiniert Spaced Repetition, KI-Aussprachecheck und echte Kontextsätze —
       kein Vokabelpauken, sondern echtes Sprachgefühl.
     </p>
-    <a href="app/" class="btn-primary" style="font-size:1rem;padding:0.85rem 2rem">
+    <a href="app/" class="btn-primary" style="font-size:1rem;padding:0.875rem 2rem;min-height:52px">
       Jetzt kostenlos starten →
     </a>
   </section>
 
   <!-- FEATURES -->
-  <section class="section" style="padding-top:2rem">
+  <section class="section" style="padding-top:1rem">
     <div class="container">
       <h2 class="section-title">Fünf Module, ein Ziel</h2>
       <p class="section-sub">Flüssig sprechen — nicht nur Vokabeln auswendig lernen.</p>
@@ -100,26 +113,26 @@
       <h2 class="section-title">Wie es funktioniert</h2>
       <p class="section-sub">In drei Schritten zur flüssigen Aussprache.</p>
 
-      <div style="display:flex;flex-direction:column;gap:1.5rem">
+      <div class="steps">
 
-        <div class="card" style="display:flex;gap:1rem;align-items:flex-start">
-          <div style="width:36px;height:36px;border-radius:50%;background:rgba(99,102,241,0.15);color:#818cf8;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+        <div class="card step">
+          <div class="step-num">1</div>
           <div>
             <div class="feature-title">Sätze sammeln</div>
             <div class="feature-desc">Importiere Sätze aus deinem Alltag in Language Islands — aus Podcasts, Serien oder Gesprächen.</div>
           </div>
         </div>
 
-        <div class="card" style="display:flex;gap:1rem;align-items:flex-start">
-          <div style="width:36px;height:36px;border-radius:50%;background:rgba(99,102,241,0.15);color:#818cf8;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+        <div class="card step">
+          <div class="step-num">2</div>
           <div>
             <div class="feature-title">Täglich üben</div>
             <div class="feature-desc">Active Recall zeigt dir genau die Sätze, die du heute wiederholen musst — nicht mehr, nicht weniger.</div>
           </div>
         </div>
 
-        <div class="card" style="display:flex;gap:1rem;align-items:flex-start">
-          <div style="width:36px;height:36px;border-radius:50%;background:rgba(99,102,241,0.15);color:#818cf8;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+        <div class="card step">
+          <div class="step-num">3</div>
           <div>
             <div class="feature-title">Fortschritt sehen</div>
             <div class="feature-desc">Das Dashboard zeigt deinen Streak, fällige Karten und wie viele Sätze du bereits gemeistert hast.</div>
@@ -131,15 +144,13 @@
   </section>
 
   <!-- CTA -->
-  <section class="section" style="text-align:center;padding-bottom:6rem">
-    <div class="container" style="max-width:500px">
-      <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:1.5rem;padding:3rem 2rem">
+  <section class="section" style="padding-bottom:5rem">
+    <div class="container" style="max-width:480px">
+      <div class="cta-box">
         <div style="font-size:2.5rem;margin-bottom:1rem">⚡</div>
-        <h2 style="font-size:1.75rem;font-weight:700;margin-bottom:0.75rem">Bereit anzufangen?</h2>
-        <p style="color:#94a3b8;margin-bottom:2rem;font-size:0.95rem">
-          Kostenlos, kein Abo, sofort loslegen.
-        </p>
-        <a href="app/" class="btn-primary" style="font-size:1rem;padding:0.85rem 2rem">
+        <h2>Bereit anzufangen?</h2>
+        <p>Kostenlos, kein Abo, sofort loslegen.</p>
+        <a href="app/" class="btn-primary" style="font-size:1rem;padding:0.875rem 2rem;min-height:52px">
           App starten →
         </a>
       </div>
@@ -149,14 +160,36 @@
 </main>
 
 <footer class="site-footer">
-  <div style="margin-bottom:0.5rem">
-    <a href="changelog.html">Changelog</a> ·
-    <a href="faq.html">FAQ</a> ·
-    <a href="contact.html">Kontakt</a> ·
+  <div class="site-footer__links">
+    <a href="changelog.html">Changelog</a>
+    <a href="faq.html">FAQ</a>
+    <a href="contact.html">Kontakt</a>
     <a href="https://github.com/timmbobimbo/hyperlingua" target="_blank" rel="noopener">GitHub</a>
   </div>
   <div>© 2026 HyperLingua</div>
 </footer>
+
+<script>
+(function(){
+  var t=document.getElementById('navToggle'),m=document.getElementById('navMobile');
+  function close(){
+    m.classList.remove('open');t.classList.remove('open');
+    t.setAttribute('aria-expanded','false');m.setAttribute('aria-hidden','true');
+    document.body.style.overflow='';
+  }
+  t.addEventListener('click',function(){
+    var isOpen=m.classList.contains('open');
+    if(isOpen){close();}
+    else{
+      m.classList.add('open');t.classList.add('open');
+      t.setAttribute('aria-expanded','true');m.setAttribute('aria-hidden','false');
+      document.body.style.overflow='hidden';
+    }
+  });
+  m.querySelectorAll('a').forEach(function(a){a.addEventListener('click',close);});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+})();
+</script>
 
 </body>
 </html>

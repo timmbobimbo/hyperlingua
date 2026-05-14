@@ -18,80 +18,120 @@
       <li><a href="faq.html">FAQ</a></li>
       <li><a href="contact.html">Kontakt</a></li>
     </ul>
-    <a href="app/" class="btn-primary">App starten →</a>
+    <div class="nav-right">
+      <a href="app/" class="btn-primary nav-cta">App starten →</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Menü" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
   </div>
 </nav>
 
-<main style="padding-top:5rem">
-  <div class="container" style="max-width:800px;padding:3rem 1.5rem">
+<div class="nav-mobile" id="navMobile" aria-hidden="true">
+  <a href="index.html">Home</a>
+  <a href="changelog.html" class="active">Changelog</a>
+  <a href="faq.html">FAQ</a>
+  <a href="contact.html">Kontakt</a>
+  <a href="app/" class="nav-mobile__cta">App starten →</a>
+</div>
 
-    <h1 style="font-size:2.25rem;font-weight:800;margin-bottom:0.5rem">Changelog</h1>
-    <p style="color:#94a3b8;margin-bottom:3rem">Alle Änderungen und neuen Features, neueste zuerst.</p>
-
-    <div class="cl-entry">
-      <div>
-        <div class="cl-version">v0.4</div>
-        <div class="cl-date">Mai 2026</div>
-      </div>
-      <ul class="cl-changes">
-        <li>Website mit Landing Page, Changelog, FAQ und Kontaktseite</li>
-        <li>App in eigenen <code>/app/</code> Unterordner verschoben</li>
-        <li>PWA-Scope und Service Worker Pfade aktualisiert</li>
-      </ul>
+<main>
+  <div class="container" style="max-width:800px">
+    <div class="page-header">
+      <h1>Changelog</h1>
+      <p>Alle Änderungen und neuen Features, neueste zuerst.</p>
     </div>
 
-    <div class="cl-entry">
-      <div>
-        <div class="cl-version">v0.3</div>
-        <div class="cl-date">Mai 2026</div>
-      </div>
-      <ul class="cl-changes">
-        <li>Active Recall: 2-Phasen-Flow (Sprechen → Feedback) ohne separaten Auflösen-Button</li>
-        <li>Auto-Weiter bei ≥ 90% Aussprache-Score nach 3 Sekunden (abbrechbar)</li>
-        <li>„Nochmal versuchen" ohne Einfluss auf SRS-Bewertung</li>
-        <li>GitHub Actions Deploy mit Cache-Busting (Hash in Dateinamen) — kein Cmd+Shift+R mehr nötig</li>
-        <li>PWA-Manifest und Service Worker für Offline-Nutzung</li>
-      </ul>
-    </div>
+    <div style="padding:0 1.5rem 4rem">
 
-    <div class="cl-entry">
-      <div>
-        <div class="cl-version">v0.2</div>
-        <div class="cl-date">Mai 2026</div>
+      <div class="cl-entry">
+        <div>
+          <div class="cl-version">v0.4</div>
+          <div class="cl-date">Mai 2026</div>
+        </div>
+        <ul class="cl-changes">
+          <li>Website mit Landing Page, Changelog, FAQ und Kontaktseite</li>
+          <li>App in eigenen <code>/app/</code> Unterordner verschoben</li>
+          <li>PWA-Scope und Service Worker Pfade aktualisiert</li>
+          <li>Vollständiges responsives Design für alle Mobilgeräte</li>
+        </ul>
       </div>
-      <ul class="cl-changes">
-        <li>Language Islands: Sätze aus echten Kontexten importieren (KI-gestützt)</li>
-        <li>Shadowing: TTS-Wiedergabe + Aussprachecheck mit Wort-Highlighting</li>
-        <li>Island-Katalog mit vorgefertigten Lernpaketen (z.B. Business English B1)</li>
-        <li>Push-to-Talk für Sprachaufnahme</li>
-      </ul>
-    </div>
 
-    <div class="cl-entry" style="border-bottom:none">
-      <div>
-        <div class="cl-version">v0.1</div>
-        <div class="cl-date">April 2026</div>
+      <div class="cl-entry">
+        <div>
+          <div class="cl-version">v0.3</div>
+          <div class="cl-date">Mai 2026</div>
+        </div>
+        <ul class="cl-changes">
+          <li>Active Recall: 2-Phasen-Flow (Sprechen → Feedback) ohne separaten Auflösen-Button</li>
+          <li>Auto-Weiter bei ≥ 90% Aussprache-Score nach 3 Sekunden (abbrechbar)</li>
+          <li>„Nochmal versuchen" ohne Einfluss auf SRS-Bewertung</li>
+          <li>GitHub Actions Deploy mit Cache-Busting — kein Cmd+Shift+R mehr nötig</li>
+          <li>PWA-Manifest und Service Worker für Offline-Nutzung</li>
+        </ul>
       </div>
-      <ul class="cl-changes">
-        <li>Erste Version: Dashboard mit Streak, fälligen Karten und neuen Wörtern</li>
-        <li>Supabase Auth (Login / Registrierung)</li>
-        <li>SM-2 Spaced Repetition Algorithmus</li>
-        <li>Grundstruktur als Single-Page-App (index.html + app.js + style.css)</li>
-      </ul>
-    </div>
 
+      <div class="cl-entry">
+        <div>
+          <div class="cl-version">v0.2</div>
+          <div class="cl-date">Mai 2026</div>
+        </div>
+        <ul class="cl-changes">
+          <li>Language Islands: Sätze aus echten Kontexten importieren (KI-gestützt)</li>
+          <li>Shadowing: TTS-Wiedergabe + Aussprachecheck mit Wort-Highlighting</li>
+          <li>Island-Katalog mit vorgefertigten Lernpaketen (z.B. Business English B1)</li>
+          <li>Push-to-Talk für Sprachaufnahme</li>
+        </ul>
+      </div>
+
+      <div class="cl-entry" style="border-bottom:none">
+        <div>
+          <div class="cl-version">v0.1</div>
+          <div class="cl-date">April 2026</div>
+        </div>
+        <ul class="cl-changes">
+          <li>Erste Version: Dashboard mit Streak, fälligen Karten und neuen Wörtern</li>
+          <li>Supabase Auth (Login / Registrierung)</li>
+          <li>SM-2 Spaced Repetition Algorithmus</li>
+          <li>Grundstruktur als Single-Page-App</li>
+        </ul>
+      </div>
+
+    </div>
   </div>
 </main>
 
 <footer class="site-footer">
-  <div style="margin-bottom:0.5rem">
-    <a href="index.html">Home</a> ·
-    <a href="faq.html">FAQ</a> ·
-    <a href="contact.html">Kontakt</a> ·
+  <div class="site-footer__links">
+    <a href="index.html">Home</a>
+    <a href="faq.html">FAQ</a>
+    <a href="contact.html">Kontakt</a>
     <a href="https://github.com/timmbobimbo/hyperlingua" target="_blank" rel="noopener">GitHub</a>
   </div>
   <div>© 2026 HyperLingua</div>
 </footer>
+
+<script>
+(function(){
+  var t=document.getElementById('navToggle'),m=document.getElementById('navMobile');
+  function close(){
+    m.classList.remove('open');t.classList.remove('open');
+    t.setAttribute('aria-expanded','false');m.setAttribute('aria-hidden','true');
+    document.body.style.overflow='';
+  }
+  t.addEventListener('click',function(){
+    var isOpen=m.classList.contains('open');
+    if(isOpen){close();}
+    else{
+      m.classList.add('open');t.classList.add('open');
+      t.setAttribute('aria-expanded','true');m.setAttribute('aria-hidden','false');
+      document.body.style.overflow='hidden';
+    }
+  });
+  m.querySelectorAll('a').forEach(function(a){a.addEventListener('click',close);});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+})();
+</script>
 
 </body>
 </html>

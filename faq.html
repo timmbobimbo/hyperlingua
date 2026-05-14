@@ -18,100 +18,136 @@
       <li><a href="faq.html" class="active">FAQ</a></li>
       <li><a href="contact.html">Kontakt</a></li>
     </ul>
-    <a href="app/" class="btn-primary">App starten →</a>
+    <div class="nav-right">
+      <a href="app/" class="btn-primary nav-cta">App starten →</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Menü" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
   </div>
 </nav>
 
-<main style="padding-top:5rem">
-  <div class="container" style="max-width:720px;padding:3rem 1.5rem">
+<div class="nav-mobile" id="navMobile" aria-hidden="true">
+  <a href="index.html">Home</a>
+  <a href="changelog.html">Changelog</a>
+  <a href="faq.html" class="active">FAQ</a>
+  <a href="contact.html">Kontakt</a>
+  <a href="app/" class="nav-mobile__cta">App starten →</a>
+</div>
 
-    <h1 style="font-size:2.25rem;font-weight:800;margin-bottom:0.5rem">Häufige Fragen</h1>
-    <p style="color:#94a3b8;margin-bottom:3rem">Alles was du wissen musst.</p>
-
-    <div class="faq-item">
-      <div class="faq-q">Was kostet HyperLingua?</div>
-      <div class="faq-a">
-        HyperLingua ist komplett kostenlos und bleibt es — kein Abo, keine versteckten Kosten.
-        Es handelt sich aktuell um eine Open Beta.
-      </div>
+<main>
+  <div class="container" style="max-width:720px">
+    <div class="page-header">
+      <h1>Häufige Fragen</h1>
+      <p>Alles was du wissen musst.</p>
     </div>
 
-    <div class="faq-item">
-      <div class="faq-q">Welche Sprachen werden unterstützt?</div>
-      <div class="faq-a">
-        Aktuell liegt der Fokus auf Englisch mit vorinstallierten Islands (z.B. Business English B1).
-        Du kannst aber Sätze in jeder Sprache als eigene Island hinzufügen — die KI-Ausspracheprüfung
-        funktioniert mit den meisten europäischen Sprachen.
-      </div>
-    </div>
+    <div style="padding:0 1.5rem 4rem">
 
-    <div class="faq-item">
-      <div class="faq-q">Brauche ich ein Konto?</div>
-      <div class="faq-a">
-        Ja. Ein Konto (E-Mail + Passwort) ist nötig, damit dein Lernfortschritt gespeichert wird.
-        Die Registrierung dauert weniger als eine Minute und ist kostenlos.
+      <div class="faq-item">
+        <div class="faq-q">Was kostet HyperLingua?</div>
+        <div class="faq-a">
+          HyperLingua ist komplett kostenlos und bleibt es — kein Abo, keine versteckten Kosten.
+          Es handelt sich aktuell um eine Open Beta.
+        </div>
       </div>
-    </div>
 
-    <div class="faq-item">
-      <div class="faq-q">Was ist SM-2 / Spaced Repetition?</div>
-      <div class="faq-a">
-        SM-2 ist ein wissenschaftlich erprobter Algorithmus, der berechnet, wann du einen Satz
-        am besten wiederholen solltest — kurz bevor du ihn vergisst. Das macht Lernen deutlich
-        effizienter als tägliches Durchblättern aller Karten. Bekannt aus Anki.
+      <div class="faq-item">
+        <div class="faq-q">Welche Sprachen werden unterstützt?</div>
+        <div class="faq-a">
+          Aktuell liegt der Fokus auf Englisch mit vorinstallierten Islands (z.B. Business English B1).
+          Du kannst aber Sätze in jeder Sprache als eigene Island hinzufügen — die KI-Ausspracheprüfung
+          funktioniert mit den meisten europäischen Sprachen.
+        </div>
       </div>
-    </div>
 
-    <div class="faq-item">
-      <div class="faq-q">Wie funktioniert der Aussprachecheck?</div>
-      <div class="faq-a">
-        Du hältst den Aufnahme-Button gedrückt und sprichst den Satz nach. HyperLingua vergleicht
-        deine Aussprache mit dem Originaltext und hebt jedes Wort in Grün (gut) oder Rot (verbesserungswürdig)
-        hervor. Ein Score von 0–100% zeigt dir deinen Fortschritt.
+      <div class="faq-item">
+        <div class="faq-q">Brauche ich ein Konto?</div>
+        <div class="faq-a">
+          Ja. Ein Konto (E-Mail + Passwort) ist nötig, damit dein Lernfortschritt gespeichert wird.
+          Die Registrierung dauert weniger als eine Minute und ist kostenlos.
+        </div>
       </div>
-    </div>
 
-    <div class="faq-item">
-      <div class="faq-q">Funktioniert die App offline?</div>
-      <div class="faq-a">
-        Teilweise. HyperLingua ist eine Progressive Web App (PWA) und cacht die wichtigsten Inhalte
-        lokal. Für den KI-Dialog, Aussprachecheck und Synchronisation wird eine Internetverbindung
-        benötigt.
+      <div class="faq-item">
+        <div class="faq-q">Was ist SM-2 / Spaced Repetition?</div>
+        <div class="faq-a">
+          SM-2 ist ein wissenschaftlich erprobter Algorithmus, der berechnet, wann du einen Satz
+          am besten wiederholen solltest — kurz bevor du ihn vergisst. Das macht Lernen deutlich
+          effizienter als tägliches Durchblättern aller Karten. Bekannt aus Anki.
+        </div>
       </div>
-    </div>
 
-    <div class="faq-item">
-      <div class="faq-q">Kann ich HyperLingua als App installieren?</div>
-      <div class="faq-a">
-        Ja. Öffne die App im Browser und wähle „Zum Startbildschirm hinzufügen" (iOS Safari)
-        oder „App installieren" (Chrome / Edge). Die App funktioniert dann wie eine native App
-        ohne Browser-UI.
+      <div class="faq-item">
+        <div class="faq-q">Wie funktioniert der Aussprachecheck?</div>
+        <div class="faq-a">
+          Du hältst den Aufnahme-Button gedrückt und sprichst den Satz nach. HyperLingua vergleicht
+          deine Aussprache mit dem Originaltext und hebt jedes Wort in Grün (gut) oder Rot (verbesserungswürdig)
+          hervor. Ein Score von 0–100% zeigt dir deinen Fortschritt.
+        </div>
       </div>
-    </div>
 
-    <div class="faq-item" style="border-bottom:none">
-      <div class="faq-q">Wie kann ich Feedback geben oder Fehler melden?</div>
-      <div class="faq-a">
-        Am schnellsten über die <a href="contact.html" style="color:#a5b4fc">Kontaktseite</a>
-        oder direkt als
-        <a href="https://github.com/timmbobimbo/hyperlingua/issues" target="_blank" rel="noopener" style="color:#a5b4fc">
-          GitHub Issue
-        </a>.
+      <div class="faq-item">
+        <div class="faq-q">Funktioniert die App offline?</div>
+        <div class="faq-a">
+          Teilweise. HyperLingua ist eine Progressive Web App (PWA) und cacht die wichtigsten Inhalte
+          lokal. Für den KI-Dialog, Aussprachecheck und Synchronisation wird eine Internetverbindung
+          benötigt.
+        </div>
       </div>
-    </div>
 
+      <div class="faq-item">
+        <div class="faq-q">Kann ich HyperLingua als App installieren?</div>
+        <div class="faq-a">
+          Ja. Öffne die App im Browser und wähle „Zum Startbildschirm hinzufügen" (iOS Safari)
+          oder „App installieren" (Chrome / Edge). Die App funktioniert dann wie eine native App
+          ohne Browser-UI.
+        </div>
+      </div>
+
+      <div class="faq-item" style="border-bottom:none">
+        <div class="faq-q">Wie kann ich Feedback geben oder Fehler melden?</div>
+        <div class="faq-a">
+          Am schnellsten über die <a href="contact.html">Kontaktseite</a>
+          oder direkt als <a href="https://github.com/timmbobimbo/hyperlingua/issues" target="_blank" rel="noopener">GitHub Issue</a>.
+        </div>
+      </div>
+
+    </div>
   </div>
 </main>
 
 <footer class="site-footer">
-  <div style="margin-bottom:0.5rem">
-    <a href="index.html">Home</a> ·
-    <a href="changelog.html">Changelog</a> ·
-    <a href="contact.html">Kontakt</a> ·
+  <div class="site-footer__links">
+    <a href="index.html">Home</a>
+    <a href="changelog.html">Changelog</a>
+    <a href="contact.html">Kontakt</a>
     <a href="https://github.com/timmbobimbo/hyperlingua" target="_blank" rel="noopener">GitHub</a>
   </div>
   <div>© 2026 HyperLingua</div>
 </footer>
+
+<script>
+(function(){
+  var t=document.getElementById('navToggle'),m=document.getElementById('navMobile');
+  function close(){
+    m.classList.remove('open');t.classList.remove('open');
+    t.setAttribute('aria-expanded','false');m.setAttribute('aria-hidden','true');
+    document.body.style.overflow='';
+  }
+  t.addEventListener('click',function(){
+    var isOpen=m.classList.contains('open');
+    if(isOpen){close();}
+    else{
+      m.classList.add('open');t.classList.add('open');
+      t.setAttribute('aria-expanded','true');m.setAttribute('aria-hidden','false');
+      document.body.style.overflow='hidden';
+    }
+  });
+  m.querySelectorAll('a').forEach(function(a){a.addEventListener('click',close);});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+})();
+</script>
 
 </body>
 </html>
