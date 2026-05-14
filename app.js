@@ -26,6 +26,11 @@ async function initAuth() {
   authUser = session?.user ?? null;
   updateAuthUI();
   supa.auth.onAuthStateChange((_e, session) => {
+    if (_e === 'PASSWORD_RECOVERY') {
+      document.getElementById('modal-recovery').classList.remove('hidden');
+      document.getElementById('auth-gate').classList.add('hidden');
+      return;
+    }
     authUser = session?.user ?? null;
     updateAuthUI();
   });
@@ -39,6 +44,10 @@ function updateAuthUI() {
     dot.classList.remove('hidden');
     document.getElementById('auth-logged-out').classList.add('hidden');
     document.getElementById('auth-logged-in').classList.remove('hidden');
+    const displayName = authUser.user_metadata?.display_name;
+    const nameEl = document.getElementById('auth-user-name');
+    if (displayName) { nameEl.textContent = displayName; nameEl.classList.remove('hidden'); }
+    else { nameEl.classList.add('hidden'); }
     document.getElementById('auth-user-email').textContent = authUser.email;
     const ls = localStorage.getItem('hl_last_sync');
     document.getElementById('auth-last-sync').textContent =
@@ -98,6 +107,8 @@ function gateSetMode(mode) {
   document.getElementById('gate-tab-register').className = isLogin ? inactiveClass : activeClass;
   document.getElementById('gate-submit-btn').textContent = isLogin ? 'Einloggen' : 'Konto erstellen';
   document.getElementById('gate-register-hint').classList.toggle('hidden', isLogin);
+  document.getElementById('gate-name').classList.toggle('hidden', isLogin);
+  document.getElementById('gate-forgot-btn').classList.toggle('hidden', !isLogin);
   document.getElementById('gate-error').textContent = '';
   document.getElementById('gate-error').style.color = '';
 }
@@ -116,17 +127,43 @@ async function gateLogin() {
 }
 
 async function gateSignup() {
+  const name  = document.getElementById('gate-name').value.trim();
   const email = document.getElementById('gate-email').value.trim();
   const pass  = document.getElementById('gate-pass').value;
   const err   = document.getElementById('gate-error');
   err.style.color = ''; err.textContent = '';
   if (!email || pass.length < 6) { err.textContent = 'E-Mail und mind. 6-stelliges Passwort eingeben.'; return; }
-  const { error } = await supa.auth.signUp({ email, password: pass });
+  const { error } = await supa.auth.signUp({
+    email, password: pass,
+    options: { data: { display_name: name || email.split('@')[0] } }
+  });
   if (error) { err.textContent = error.message; }
   else {
     err.style.color = '#34d399';
     err.textContent = '✓ Bestätigungs-E-Mail gesendet – bitte prüfen!';
   }
+}
+
+async function gateForgotPassword() {
+  const email = document.getElementById('gate-email').value.trim();
+  const err   = document.getElementById('gate-error');
+  err.style.color = ''; err.textContent = '';
+  if (!email) { err.textContent = 'Bitte zuerst E-Mail eingeben.'; return; }
+  const { error } = await supa.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.href.split('#')[0]
+  });
+  if (error) { err.textContent = error.message; }
+  else { err.style.color = '#34d399'; err.textContent = '✓ Reset-E-Mail gesendet – bitte prüfen!'; }
+}
+
+async function submitPasswordReset() {
+  const pass = document.getElementById('recovery-pass').value;
+  const err  = document.getElementById('recovery-error');
+  err.style.color = ''; err.textContent = '';
+  if (pass.length < 6) { err.textContent = 'Mind. 6 Zeichen.'; return; }
+  const { error } = await supa.auth.updateUser({ password: pass });
+  if (error) { err.textContent = error.message; }
+  else { document.getElementById('modal-recovery').classList.add('hidden'); updateAuthUI(); }
 }
 
 async function loginUser() {

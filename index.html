@@ -36,6 +36,9 @@
     </div>
 
     <div class="space-y-3">
+      <input id="gate-name" type="text" placeholder="Vorname oder Nutzername"
+             class="hidden w-full rounded-xl px-4 py-3 text-sm text-gray-200 border border-gray-700
+                    focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b">
       <input id="gate-email" type="email" placeholder="E-Mail"
              class="w-full rounded-xl px-4 py-3 text-sm text-gray-200 border border-gray-700
                     focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b">
@@ -47,6 +50,12 @@
       <button id="gate-submit-btn" onclick="gateSubmit()"
               class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500
                      text-white font-semibold transition-colors">Einloggen</button>
+      <div class="text-center">
+        <button id="gate-forgot-btn" onclick="gateForgotPassword()"
+                class="text-xs text-gray-600 hover:text-gray-400 transition-colors">
+          Passwort vergessen?
+        </button>
+      </div>
     </div>
   </div>
 
@@ -996,7 +1005,8 @@
           </svg>
         </div>
         <div>
-          <p id="auth-user-email" class="text-sm font-medium text-gray-200"></p>
+          <p id="auth-user-name" class="hidden text-sm font-semibold text-gray-100"></p>
+          <p id="auth-user-email" class="text-xs text-gray-500"></p>
           <p class="text-xs text-gray-600">Letzter Sync: <span id="auth-last-sync">–</span></p>
           <p class="text-xs text-violet-400 font-medium mt-0.5"><span id="credit-balance">–</span></p>
         </div>
@@ -1084,6 +1094,23 @@
   </div>
 </div>
 
+
+<!-- PASSWORD RECOVERY -->
+<div id="modal-recovery" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center p-6"
+     style="background:#09090f">
+  <div class="text-2xl font-bold text-indigo-400 mb-1">⚡ HyperLingua</div>
+  <p class="text-sm text-gray-500 mb-6">Neues Passwort setzen</p>
+  <div class="w-full max-w-sm space-y-3">
+    <input id="recovery-pass" type="password" placeholder="Neues Passwort (mind. 6 Zeichen)"
+           class="w-full rounded-xl px-4 py-3 text-sm text-gray-200 border border-gray-700
+                  focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b"
+           onkeydown="if(event.key==='Enter')submitPasswordReset()">
+    <p id="recovery-error" class="text-xs text-rose-400 min-h-[16px]"></p>
+    <button onclick="submitPasswordReset()"
+            class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                   text-white font-semibold transition-colors">Passwort speichern</button>
+  </div>
+</div>
 
 <script src="app.js"></script>
 </body>
