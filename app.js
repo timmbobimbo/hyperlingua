@@ -395,7 +395,56 @@ function getSRSStats(filterIslandId) {
 // ── navigation ────────────────────────────────────────────────
 let currentView = 'dashboard';
 
+function getUnlockStatus() {
+  const islands = DB.islands();
+  const allSentences = islands.flatMap(i => i.sentences || []);
+  const hist = DB.history();
+  return {
+    islands:  true,
+    shadowing: islands.some(i => (i.sentences || []).length > 0),
+    recall:    allSentences.some(s => s.shadowedAt),
+    dialogue:  Object.values(hist).some(d => (d.reviewed || 0) > 0)
+  };
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.add('hidden'), 3000);
+}
+
+function applyUnlockStatus() {
+  const u = getUnlockStatus();
+  const hints = {
+    shadowing: 'Erstelle zuerst eine Island mit Sätzen',
+    recall:    'Übe zuerst einen Satz im Shadowing (≥50%)',
+    dialogue:  'Schließe zuerst eine Review-Session ab'
+  };
+  ['shadowing','recall','dialogue'].forEach(view => {
+    const locked = !u[view];
+    const card   = document.getElementById('dash-card-' + view);
+    const badge  = document.getElementById('lock-badge-' + view);
+    const navLock = document.getElementById('nav-lock-' + view);
+    const mobBtn  = document.getElementById('mob-nav-' + view);
+    if (card)    { card.style.opacity = locked ? '0.45' : '1'; card.style.cursor = locked ? 'not-allowed' : 'pointer'; }
+    if (badge)   badge.classList.toggle('hidden', !locked);
+    if (navLock) navLock.classList.toggle('hidden', !locked);
+    if (mobBtn)  mobBtn.style.opacity = locked ? '0.45' : '1';
+  });
+}
+
 function nav(view) {
+  const u = getUnlockStatus();
+  const lockHints = {
+    shadowing: '🔒 Erstelle zuerst eine Island mit Sätzen',
+    recall:    '🔒 Übe zuerst einen Satz im Shadowing (≥50%)',
+    dialogue:  '🔒 Schließe zuerst eine Review-Session ab'
+  };
+  if (lockHints[view] && !u[view]) { showToast(lockHints[view]); return; }
+
   ['dashboard','islands','shadowing','recall','dialogue'].forEach(v => {
     const el = document.getElementById('view-'+v);
     el.classList.add('hidden'); el.classList.remove('fade-up');
@@ -450,6 +499,7 @@ function renderDashboard() {
   if (!islands.length) {
     cont.innerHTML = '<div class="col-span-2 sm:col-span-4 text-center py-8 text-gray-600 text-sm">' +
       'Noch keine Islands. <button onclick="nav(\'islands\')" class="text-indigo-400 hover:underline">Jetzt erstellen →</button></div>';
+    applyUnlockStatus();
     return;
   }
   cont.innerHTML = [...islands].reverse().slice(0,4).map(island => `
@@ -461,6 +511,7 @@ function renderDashboard() {
       <div class="text-xs text-gray-600 mt-0.5">${esc(island.language||'–')}</div>
       <div class="text-xs text-gray-700 mt-1.5">${(island.sentences||[]).length} Sätze</div>
     </div>`).join('');
+  applyUnlockStatus();
 }
 
 function islandEmoji(n='') {
