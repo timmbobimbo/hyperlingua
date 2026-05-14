@@ -1,9 +1,9 @@
-const CACHE = 'hyperlingua-v2';
+const CACHE = 'hyperlingua-v3';
 const ASSETS = [
-  '/hyperlingua/',
-  '/hyperlingua/index.html',
-  '/hyperlingua/islands/catalog.json',
-  '/hyperlingua/islands/business-english-b1.json'
+  '/hyperlingua/app/',
+  '/hyperlingua/app/index.html',
+  '/hyperlingua/app/islands/catalog.json',
+  '/hyperlingua/app/islands/business-english-b1.json'
 ];
 
 self.addEventListener('install', e => {

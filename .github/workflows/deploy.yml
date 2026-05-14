@@ -24,24 +24,28 @@ jobs:
 
       - name: Cache busting build
         run: |
-          JS_HASH=$(sha256sum app.js | cut -c1-8)
-          CSS_HASH=$(sha256sum style.css | cut -c1-8)
+          JS_HASH=$(sha256sum app/app.js | cut -c1-8)
+          CSS_HASH=$(sha256sum app/style.css | cut -c1-8)
 
-          mkdir dist
+          mkdir -p dist/app
 
-          # Copy everything except the unhashed source files
+          # Copy root website files (not app dir, not git infra, not dist)
           find . -maxdepth 1 \
             ! -name '.' ! -name '.git' ! -name '.github' \
-            ! -name 'dist' ! -name 'app.js' ! -name 'style.css' \
+            ! -name 'dist' ! -name 'app' \
             -exec cp -r {} dist/ \;
 
-          # Copy icons, islands, supabase subdirs explicitly (find only covers maxdepth 1)
-          cp app.js    "dist/app.${JS_HASH}.js"
-          cp style.css "dist/style.${CSS_HASH}.css"
+          # Copy app directory excluding unhashed source files
+          find app -maxdepth 1 \
+            ! -name 'app' ! -name 'app.js' ! -name 'style.css' \
+            -exec cp -r {} dist/app/ \;
 
-          # Patch index.html references
-          sed -i "s|src=\"app\.js\"|src=\"app.${JS_HASH}.js\"|g"       dist/index.html
-          sed -i "s|href=\"style\.css\"|href=\"style.${CSS_HASH}.css\"|g" dist/index.html
+          cp app/app.js    "dist/app/app.${JS_HASH}.js"
+          cp app/style.css "dist/app/style.${CSS_HASH}.css"
+
+          # Patch app/index.html references
+          sed -i "s|src=\"app\.js\"|src=\"app.${JS_HASH}.js\"|g"       dist/app/index.html
+          sed -i "s|href=\"style\.css\"|href=\"style.${CSS_HASH}.css\"|g" dist/app/index.html
 
       - uses: actions/upload-pages-artifact@v3
         with:

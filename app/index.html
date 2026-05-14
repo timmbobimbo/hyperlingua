@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HyperLingua</title>
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="HyperLingua">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="text-gray-100 min-h-screen">
+
+<!-- AUTH GATE -->
+<div id="auth-gate" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center p-6"
+     style="background:#09090f">
+  <div class="text-3xl font-bold text-indigo-400 mb-1">⚡ HyperLingua</div>
+  <p class="text-sm text-gray-500 mb-6">Sprachenlernen mit KI — kostenlos starten</p>
+
+  <div class="w-full max-w-sm">
+    <!-- Tab-Toggle -->
+    <div class="flex rounded-xl mb-5 p-1 gap-1" style="background:#1f1f2b">
+      <button id="gate-tab-login" onclick="gateSetMode('login')"
+              class="flex-1 py-2 rounded-lg text-sm font-semibold transition-colors bg-indigo-600 text-white">
+        Einloggen
+      </button>
+      <button id="gate-tab-register" onclick="gateSetMode('register')"
+              class="flex-1 py-2 rounded-lg text-sm font-medium transition-colors text-gray-400 hover:text-gray-200">
+        Registrieren
+      </button>
+    </div>
+
+    <div class="space-y-3">
+      <input id="gate-name" type="text" placeholder="Vorname oder Nutzername"
+             class="hidden w-full rounded-xl px-4 py-3 text-sm text-gray-200 border border-gray-700
+                    focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b">
+      <input id="gate-email" type="email" placeholder="E-Mail"
+             class="w-full rounded-xl px-4 py-3 text-sm text-gray-200 border border-gray-700
+                    focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b">
+      <div class="relative">
+        <input id="gate-pass" type="password" placeholder="Passwort (mind. 6 Zeichen)"
+               class="w-full rounded-xl px-4 py-3 pr-11 text-sm text-gray-200 border border-gray-700
+                      focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b"
+               onkeydown="if(event.key==='Enter')gateSubmit()">
+        <button type="button" onclick="togglePassVis('gate-pass','gate-pass-eye')"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors">
+          <svg id="gate-pass-eye" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+          </svg>
+        </button>
+      </div>
+      <div id="gate-pass-confirm-wrap" class="hidden relative">
+        <input id="gate-pass-confirm" type="password" placeholder="Passwort bestätigen"
+               class="w-full rounded-xl px-4 py-3 pr-11 text-sm text-gray-200 border border-gray-700
+                      focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b"
+               onkeydown="if(event.key==='Enter')gateSubmit()">
+        <button type="button" onclick="togglePassVis('gate-pass-confirm','gate-pass-confirm-eye')"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors">
+          <svg id="gate-pass-confirm-eye" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+          </svg>
+        </button>
+      </div>
+      <p id="gate-error" class="text-xs text-rose-400 min-h-[16px]"></p>
+      <button id="gate-submit-btn" onclick="gateSubmit()"
+              class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                     text-white font-semibold transition-colors">Einloggen</button>
+      <div class="text-center">
+        <button id="gate-forgot-btn" onclick="gateForgotPassword()"
+                class="text-xs text-gray-600 hover:text-gray-400 transition-colors">
+          Passwort vergessen?
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <p id="gate-register-hint" class="hidden text-xs text-gray-600 mt-6 text-center">
+    500 kostenlose Credits bei Registrierung
+  </p>
+</div>
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 border-b border-gray-800"
+        style="background:rgba(9,9,15,.92);backdrop-filter:blur(8px)">
+  <div class="max-w-4xl mx-auto px-4 flex items-center justify-between h-14">
+    <span class="font-bold text-lg text-indigo-400 tracking-tight">⚡ HyperLingua</span>
+    <nav class="hidden sm:flex">
+      <button class="nav-btn active px-3 h-14 text-sm font-medium text-gray-400"
+              data-view="dashboard" onclick="nav('dashboard')">Dashboard</button>
+      <button class="nav-btn px-3 h-14 text-sm font-medium text-gray-400"
+              data-view="islands"   onclick="nav('islands')">Islands</button>
+      <button class="nav-btn px-3 h-14 text-sm font-medium text-gray-400"
+              data-view="shadowing" onclick="nav('shadowing')">Shadowing<span id="nav-lock-shadowing" class="hidden ml-1 text-xs">🔒</span></button>
+      <button class="nav-btn px-3 h-14 text-sm font-medium text-gray-400"
+              data-view="recall"    onclick="nav('recall')">Review<span id="nav-lock-recall" class="hidden ml-1 text-xs">🔒</span></button>
+      <button class="nav-btn px-3 h-14 text-sm font-medium text-gray-400"
+              data-view="dialogue"  onclick="nav('dialogue')">Dialogue<span id="nav-lock-dialogue" class="hidden ml-1 text-xs">🔒</span></button>
+    </nav>
+    <div class="flex items-center gap-1">
+    <button id="auth-nav-btn" onclick="openModal('modal-auth')"
+            class="relative flex items-center gap-1.5 text-gray-500 hover:text-gray-300 transition-colors p-1"
+            title="Account / Sync">
+      <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+      </svg>
+      <span id="nav-user-name" class="hidden text-sm font-medium text-gray-300 max-w-[120px] truncate"></span>
+      <span id="auth-dot" class="hidden absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-emerald-400"></span>
+    </button>
+    <button onclick="openModal('modal-settings')"
+            class="text-gray-500 hover:text-gray-300 transition-colors p-1">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066
+             c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35
+             a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0
+             00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066
+             c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924
+             0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07
+             2.572-1.065z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+    </button>
+    </div>
+  </div>
+</header>
+
+<!-- Bottom nav (mobile only) -->
+<nav class="sm:hidden fixed bottom-0 inset-x-0 z-40 flex border-t border-gray-800"
+     style="background:rgba(9,9,15,.96);backdrop-filter:blur(8px);padding-bottom:env(safe-area-inset-bottom)">
+  <button class="bot-btn nav-btn active" data-view="dashboard" onclick="nav('dashboard')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+    </svg>
+    <span>Home</span>
+  </button>
+  <button class="bot-btn nav-btn" data-view="islands" onclick="nav('islands')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/>
+    </svg>
+    <span>Islands</span>
+  </button>
+  <button id="mob-nav-shadowing" class="bot-btn nav-btn" data-view="shadowing" onclick="nav('shadowing')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+    </svg>
+    <span>Shadowing</span>
+  </button>
+  <button id="mob-nav-recall" class="bot-btn nav-btn" data-view="recall" onclick="nav('recall')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+    </svg>
+    <span>Review</span>
+  </button>
+  <button id="mob-nav-dialogue" class="bot-btn nav-btn" data-view="dialogue" onclick="nav('dialogue')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+    </svg>
+    <span>Dialogue</span>
+  </button>
+</nav>
+
+<main class="max-w-4xl mx-auto px-4 py-6 pb-24 sm:pb-6">
+
+<!-- ══════════════════════ DASHBOARD ══════════════════════ -->
+<div id="view-dashboard" class="fade-up">
+
+  <!-- SRS Stats – 3 big cards -->
+  <div class="grid grid-cols-3 gap-3 mb-6">
+    <div class="stat-due cursor-pointer rounded-2xl border border-gray-800 p-5 text-center transition-all"
+         style="background:#111117" onclick="nav('recall')">
+      <div id="dash-due" class="text-5xl font-bold text-indigo-400 tabular-nums mb-1">0</div>
+      <div class="text-xs text-gray-500 uppercase tracking-widest">Fällig</div>
+      <div class="text-xs text-gray-700 mt-1">zur Wiederholung</div>
+    </div>
+    <div class="stat-new cursor-pointer rounded-2xl border border-gray-800 p-5 text-center transition-all"
+         style="background:#111117" onclick="nav('recall')">
+      <div id="dash-new" class="text-5xl font-bold text-emerald-400 tabular-nums mb-1">0</div>
+      <div class="text-xs text-gray-500 uppercase tracking-widest">Neu</div>
+      <div class="text-xs text-gray-700 mt-1">noch nie geübt</div>
+    </div>
+    <div class="stat-streak rounded-2xl border border-gray-800 p-5 text-center transition-all"
+         style="background:#111117">
+      <div id="dash-streak" class="text-5xl font-bold text-amber-400 tabular-nums mb-1">0</div>
+      <div class="text-xs text-gray-500 uppercase tracking-widest">Streak</div>
+      <div class="text-xs text-gray-700 mt-1">Tage in Folge</div>
+    </div>
+  </div>
+
+  <!-- Start review button -->
+  <div id="dash-review-cta" class="mb-6">
+    <button onclick="nav('recall')"
+            class="w-full py-3.5 rounded-xl font-semibold text-base transition-colors bg-indigo-600 hover:bg-indigo-500 text-white">
+      Review starten →
+    </button>
+  </div>
+  <div id="dash-all-done" class="hidden mb-6 rounded-xl border border-gray-800 p-4 text-center text-sm text-gray-500"
+       style="background:#111117">
+    ✅ Alle Karten für heute erledigt – komm morgen wieder!
+  </div>
+
+  <!-- Method overview -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+    <div id="dash-card-islands" onclick="nav('islands')"
+         class="island-card cursor-pointer rounded-xl border border-gray-800 p-4 transition-all relative"
+         style="background:#111117">
+      <div class="text-2xl mb-2">🏝️</div>
+      <div class="font-semibold text-sm mb-1">1 · Language Islands</div>
+      <div class="text-xs text-gray-500 leading-relaxed">Sätze im Kontext sammeln</div>
+      <div id="dash-island-count" class="mt-2 text-xs text-indigo-400 font-medium"></div>
+    </div>
+    <div id="dash-card-shadowing" onclick="nav('shadowing')"
+         class="island-card cursor-pointer rounded-xl border border-gray-800 p-4 transition-all relative"
+         style="background:#111117">
+      <span id="lock-badge-shadowing" class="hidden absolute top-2 right-2 text-sm">🔒</span>
+      <div class="text-2xl mb-2">🎙️</div>
+      <div class="font-semibold text-sm mb-1">2 · Shadowing</div>
+      <div class="text-xs text-gray-500 leading-relaxed">Hören &amp; nachsprechen</div>
+      <div class="mt-2 text-xs text-emerald-400 font-medium">TTS + Aussprache-Check</div>
+    </div>
+    <div id="dash-card-recall" onclick="nav('recall')"
+         class="island-card cursor-pointer rounded-xl border border-gray-800 p-4 transition-all relative"
+         style="background:#111117">
+      <span id="lock-badge-recall" class="hidden absolute top-2 right-2 text-sm">🔒</span>
+      <div class="text-2xl mb-2">🧠</div>
+      <div class="font-semibold text-sm mb-1">3 · Active Recall</div>
+      <div class="text-xs text-gray-500 leading-relaxed">SM-2 Spaced Repetition</div>
+      <div id="dash-review-count" class="mt-2 text-xs text-amber-400 font-medium"></div>
+    </div>
+    <div id="dash-card-dialogue" onclick="nav('dialogue')"
+         class="island-card cursor-pointer rounded-xl border border-gray-800 p-4 transition-all relative"
+         style="background:#111117">
+      <span id="lock-badge-dialogue" class="hidden absolute top-2 right-2 text-sm">🔒</span>
+      <div class="text-2xl mb-2">💬</div>
+      <div class="font-semibold text-sm mb-1">4 · Dialogue</div>
+      <div class="text-xs text-gray-500 leading-relaxed">Freies KI-Gespräch</div>
+      <div class="mt-2 text-xs text-violet-400 font-medium">Endlevel</div>
+    </div>
+  </div>
+
+  <!-- Recent islands -->
+  <div class="flex items-center justify-between mb-3">
+    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-widest">Islands</h3>
+    <button onclick="nav('islands')" class="text-xs text-indigo-400 hover:text-indigo-300">Alle →</button>
+  </div>
+  <div id="dash-recent" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+</div>
+
+<!-- ══════════════════════ ISLANDS ══════════════════════ -->
+<div id="view-islands" class="hidden fade-up">
+  <div class="flex items-center justify-between mb-5">
+    <div>
+      <h2 class="text-2xl font-bold">Language Islands</h2>
+      <p class="text-sm text-gray-500 mt-0.5">Sätze im Kontext – keine Vokabellisten</p>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="openLibrary()"
+              class="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700
+                     text-gray-300 px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+        </svg>
+        Bibliothek
+      </button>
+      <button onclick="openAIIsland()"
+              class="flex items-center gap-1.5 bg-violet-700 hover:bg-violet-600
+                     text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+        </svg>
+        KI-Island
+      </button>
+      <button onclick="openAddIsland()"
+              class="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500
+                     text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Neue Island
+      </button>
+    </div>
+  </div>
+  <div id="islands-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+
+  <!-- Island detail -->
+  <div id="island-detail" class="hidden">
+    <div class="rounded-2xl border border-gray-800 overflow-hidden" style="background:#111117">
+      <div class="p-5 border-b border-gray-800 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <button onclick="closeDetail()" class="text-gray-500 hover:text-gray-300 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <div>
+            <h3 id="detail-name" class="text-xl font-bold"></h3>
+            <p id="detail-meta" class="text-xs text-gray-500"></p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openAddSentence()"
+                  class="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500
+                         text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Satz
+          </button>
+          <button onclick="deleteIsland()" class="p-1.5 text-gray-600 hover:text-rose-400 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7
+                   m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div id="sentences-list" class="divide-y divide-gray-800/70"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ SHADOWING ══════════════════════ -->
+<div id="view-shadowing" class="hidden fade-up">
+  <h2 class="text-2xl font-bold mb-1">Shadowing</h2>
+  <p class="text-sm text-gray-500 mb-5">Hören, imitieren, Aussprache trainieren</p>
+
+  <div class="mb-3">
+    <label class="block text-xs text-gray-500 mb-1.5 uppercase tracking-widest">Island</label>
+    <select id="shadow-island-sel" onchange="loadShadowIsland()"
+            class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
+                   focus:border-indigo-500 focus:outline-none" style="background:#1a1a24">
+      <option value="">– wählen –</option>
+    </select>
+  </div>
+
+  <div id="shadow-empty" class="text-center py-16 text-gray-600">
+    <div class="text-4xl mb-3">🎙️</div>
+    <p class="text-sm">Wähle eine Island</p>
+  </div>
+
+  <div id="shadow-player" class="hidden">
+    <div class="rounded-2xl border border-gray-800 p-6" style="background:#111117">
+
+      <!-- Header: progress + settings + nav -->
+      <div class="flex items-center justify-between mb-5">
+        <span id="shadow-prog" class="text-xs text-gray-600 font-mono">1 / 1</span>
+        <div class="flex items-center gap-1">
+          <button onclick="toggleShadowSettings()"
+                  class="p-2 rounded-lg text-gray-600 hover:text-gray-400 hover:bg-gray-800 transition-colors"
+                  title="Einstellungen">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94
+                   3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724
+                   1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572
+                   1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31
+                   -.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724
+                   1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </button>
+          <button onclick="shadowPrev()" class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <button onclick="shadowNext()" class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Settings panel (hidden by default) -->
+      <div id="shadow-settings" class="hidden mb-5 p-4 rounded-xl border border-gray-800" style="background:#1a1a24">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-gray-500 mb-1.5 block uppercase tracking-widest">Stimme</label>
+            <select id="voice-sel"
+                    class="w-full rounded-xl px-3 py-2 text-sm text-gray-200 border border-gray-700
+                           focus:border-indigo-500 focus:outline-none" style="background:#111117">
+              <option value="nova">Nova (weiblich)</option>
+              <option value="alloy">Alloy (neutral)</option>
+              <option value="echo">Echo (männlich)</option>
+              <option value="fable">Fable (britisch)</option>
+              <option value="onyx">Onyx (tief)</option>
+              <option value="shimmer">Shimmer (sanft)</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1.5 block uppercase tracking-widest">Speed</label>
+            <select id="tts-rate"
+                    class="w-full rounded-xl px-3 py-2 text-sm text-gray-200 border border-gray-700
+                           focus:border-indigo-500 focus:outline-none" style="background:#111117">
+              <option value="0.5">0.5×</option>
+              <option value="0.75">0.75×</option>
+              <option value="1" selected>1×</option>
+              <option value="1.25">1.25×</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PHASE 1 + 2: Hören & Nachsprechen ── -->
+      <div id="shadow-phase12" class="flex flex-col items-center">
+
+        <!-- German translation (visible immediately while TTS plays) -->
+        <p id="shadow-translation-pre"
+           class="text-2xl font-medium text-gray-300 text-center mb-4 w-full
+                  transition-opacity duration-500 opacity-0"></p>
+
+        <!-- Sentence + IPA (fades in after TTS ends) -->
+        <div id="shadow-sentence-wrap"
+             class="text-center mb-5 transition-opacity duration-500 opacity-0 w-full">
+          <p id="shadow-sentence" class="text-2xl font-medium text-gray-100 leading-snug mb-1"></p>
+          <p id="shadow-ipa" class="text-xs text-indigo-400/60 font-mono tracking-wide min-h-[1.2em]"></p>
+        </div>
+
+        <!-- Play button -->
+        <button id="btn-play" onclick="playShadowTTS()"
+                class="w-16 h-16 bg-indigo-600 hover:bg-indigo-500 rounded-full
+                       flex items-center justify-center transition-colors shadow-lg mb-3">
+          <svg id="icon-play" class="w-6 h-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+          <svg id="icon-stop" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 24 24">
+            <rect x="6" y="6" width="12" height="12" rx="1"/>
+          </svg>
+        </button>
+
+        <!-- Waveform -->
+        <div id="waveform" class="hidden flex items-end gap-0.5 h-5 mb-3">
+          <div class="wave-bar w-1.5 bg-indigo-400 rounded-full" style="height:6px"></div>
+          <div class="wave-bar w-1.5 bg-indigo-400 rounded-full" style="height:6px"></div>
+          <div class="wave-bar w-1.5 bg-indigo-400 rounded-full" style="height:6px"></div>
+          <div class="wave-bar w-1.5 bg-indigo-400 rounded-full" style="height:6px"></div>
+          <div class="wave-bar w-1.5 bg-indigo-400 rounded-full" style="height:6px"></div>
+        </div>
+
+        <!-- Record button (appears after TTS) -->
+        <div id="shadow-rec-area" class="hidden w-full mt-2">
+          <button id="btn-record"
+                  onmousedown="startShadowRec(event)" ontouchstart="startShadowRec(event)"
+                  class="w-full py-4 rounded-2xl flex items-center justify-center gap-3
+                         bg-rose-500/10 border border-rose-500/20 text-rose-400
+                         text-sm font-medium transition-colors hover:bg-rose-500/20 select-none">
+            <span id="rec-dot" class="w-2.5 h-2.5 rounded-full bg-rose-500 flex-shrink-0"></span>
+            <span id="rec-label">Halten zum Nachsprechen</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ── PHASE 3: Feedback ── -->
+      <div id="shadow-phase3" class="hidden flex-col items-center w-full">
+
+        <!-- 1. Korrekter englischer Zielsatz -->
+        <p id="shadow-target-p3"
+           class="text-2xl font-medium text-gray-100 text-center leading-snug mb-1 w-full"></p>
+
+        <!-- 2. Deutsche Bedeutung -->
+        <p id="shadow-translation"
+           class="text-base text-gray-400 text-center mb-4 w-full"></p>
+
+        <!-- 3. Erkannter Satz mit Word-Highlighting (verzögert) -->
+        <p id="pron-text"
+           class="text-xs text-gray-500 text-center leading-relaxed mb-3
+                  opacity-0 transition-opacity duration-500"></p>
+
+        <!-- 4. Score (inline, subtil) -->
+        <div id="pron-score-inline" class="text-sm font-medium mb-2"></div>
+
+        <!-- 5. Score-Bar (dünn) -->
+        <div class="h-0.5 rounded-full overflow-hidden w-full mb-3" style="background:#1f1f2b">
+          <div id="pron-bar" class="h-full rounded-full transition-all duration-700" style="width:0%"></div>
+        </div>
+
+        <!-- 6. Kurzer Hinweis bei niedrigem Score -->
+        <p id="shadow-hint" class="hidden text-xs text-gray-600 text-center mb-3"></p>
+
+        <!-- 7. Auto-advance -->
+        <div id="shadow-auto-advance" class="hidden text-xs text-emerald-400 text-center mb-3">
+          Weiter in <span id="shadow-auto-countdown">4</span>s
+          <button onclick="cancelShadowAutoAdvance()"
+                  class="ml-2 text-gray-600 hover:text-gray-400 transition-colors">✕</button>
+        </div>
+
+        <!-- 8. Buttons -->
+        <div class="grid grid-cols-2 gap-3 w-full">
+          <button onclick="retryShadow()"
+                  class="py-3 rounded-xl text-sm font-medium bg-gray-800 hover:bg-gray-700
+                         text-gray-300 transition-colors">
+            🔄 Nochmal hören
+          </button>
+          <button onclick="shadowNext()"
+                  class="py-3 rounded-xl text-sm font-medium bg-indigo-600 hover:bg-indigo-500
+                         text-white transition-colors">
+            Weiter →
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ RECALL / SRS ══════════════════════ -->
+<div id="view-recall" class="hidden fade-up">
+
+  <!-- Setup screen -->
+  <div id="srs-setup">
+    <h2 class="text-2xl font-bold mb-1">Review</h2>
+    <p class="text-sm text-gray-500 mb-5">SM-2 Spaced Repetition – nur fällige Karten</p>
+
+    <div class="grid grid-cols-3 gap-3 mb-5">
+      <div class="rounded-xl border border-gray-800 p-4 text-center" style="background:#111117">
+        <div id="srs-due-count"  class="text-3xl font-bold text-indigo-400 tabular-nums">0</div>
+        <div class="text-xs text-gray-600 mt-1">Fällig</div>
+      </div>
+      <div class="rounded-xl border border-gray-800 p-4 text-center" style="background:#111117">
+        <div id="srs-new-count"  class="text-3xl font-bold text-emerald-400 tabular-nums">0</div>
+        <div class="text-xs text-gray-600 mt-1">Neu</div>
+      </div>
+      <div class="rounded-xl border border-gray-800 p-4 text-center" style="background:#111117">
+        <div id="srs-learn-count" class="text-3xl font-bold text-amber-400 tabular-nums">0</div>
+        <div class="text-xs text-gray-600 mt-1">Lernen</div>
+      </div>
+    </div>
+
+    <p id="srs-locked-hint" class="hidden text-xs text-gray-600 text-center mb-4">
+      🔒 <span id="srs-locked-count">0</span> Sätze noch gesperrt — erst in Shadowing üben (≥50%)
+    </p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5 uppercase tracking-widest">Island</label>
+        <select id="srs-island-sel"
+                class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
+                       focus:border-indigo-500 focus:outline-none" style="background:#1a1a24">
+          <option value="all">Alle Islands</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Voice row (Review) -->
+    <div id="srs-voice-row" class="hidden mb-5">
+      <label class="text-xs text-gray-500 uppercase tracking-widest mb-1.5 block">Stimme</label>
+      <select id="srs-voice-sel"
+              class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
+                     focus:border-indigo-500 focus:outline-none" style="background:#1a1a24">
+        <option value="nova">Nova (weiblich)</option>
+        <option value="alloy">Alloy (neutral)</option>
+        <option value="echo">Echo (männlich)</option>
+        <option value="fable">Fable (britisch)</option>
+        <option value="onyx">Onyx (tief)</option>
+        <option value="shimmer">Shimmer (weiblich, sanft)</option>
+      </select>
+    </div>
+
+    <div id="srs-no-cards" class="hidden mb-4 p-4 rounded-xl border border-gray-800 text-center
+                                   text-sm text-gray-500" style="background:#111117">
+      Keine fälligen Karten – super! Füge neue Sätze hinzu oder warte bis morgen.
+    </div>
+
+    <button id="srs-start-btn" onclick="startSRS()"
+            class="w-full py-3 rounded-xl font-semibold bg-indigo-600 hover:bg-indigo-500
+                   text-white transition-colors">
+      Session starten
+    </button>
+  </div>
+
+  <!-- Session screen -->
+  <div id="srs-session" class="hidden">
+    <!-- Progress bar -->
+    <div class="flex items-center gap-3 mb-4">
+      <button onclick="endSRS()" class="text-sm text-gray-500 hover:text-gray-300 transition-colors flex-shrink-0">
+        ← Ende
+      </button>
+      <div class="flex-1 h-1.5 rounded-full bg-gray-800 overflow-hidden">
+        <div id="srs-bar" class="srs-bar-fill h-full rounded-full bg-indigo-500" style="width:0%"></div>
+      </div>
+      <span id="srs-prog-label" class="text-xs text-gray-600 font-mono flex-shrink-0">0/0</span>
+    </div>
+
+    <!-- Card type badge -->
+    <div class="flex items-center gap-2 mb-3">
+      <span id="srs-card-type" class="text-xs px-2 py-0.5 rounded-full bg-gray-800 text-gray-500"></span>
+      <span id="srs-card-island" class="text-xs text-gray-700"></span>
+    </div>
+
+    <!-- Review card (two-phase, no flip) -->
+    <div id="srs-card" class="rounded-2xl border border-gray-800 p-6 flex flex-col mb-4"
+         style="background:#111117; min-height:min(370px,52vh)">
+
+      <!-- ── PHASE 1: Frage + Sprechen ── -->
+      <div id="srs-phase1" class="flex flex-col items-center flex-1">
+        <p id="srs-front-hint" class="text-xs text-gray-600 uppercase tracking-widest mb-3 mt-2"></p>
+        <p id="srs-front-text" class="text-2xl font-medium text-center text-gray-100
+                                      leading-snug mb-6 flex-1 flex items-center"></p>
+
+        <!-- Idle: push-to-talk -->
+        <div id="srs-speech-idle" class="flex flex-col items-center gap-2 w-full">
+          <button id="srs-mic-btn"
+                  onmousedown="startSRSSpeech(event)" ontouchstart="startSRSSpeech(event)"
+                  class="flex items-center gap-2 px-6 py-3 rounded-xl select-none
+                         bg-rose-500/15 border border-rose-500/30 text-rose-400
+                         text-sm font-medium transition-colors hover:bg-rose-500/25">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4
+                   m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+            </svg>
+            <span id="srs-mic-label">Halten zum Sprechen</span>
+          </button>
+          <button onclick="skipSRSSpeech()"
+                  class="text-xs text-gray-600 hover:text-gray-400 transition-colors">
+            Überspringen →
+          </button>
+        </div>
+
+        <!-- Recording indicator -->
+        <div id="srs-recording-indicator" class="hidden flex-col items-center gap-1">
+          <div class="flex items-center gap-2 text-rose-400 text-sm font-medium">
+            <div class="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></div>
+            Aufnahme läuft…
+          </div>
+          <div class="text-xs text-gray-600">Loslassen zum Stoppen</div>
+        </div>
+
+        <!-- Analyzing indicator -->
+        <div id="srs-analyzing" class="hidden text-xs text-gray-500">Analysiere…</div>
+      </div>
+
+      <!-- ── PHASE 2: Feedback + Bewertung ── -->
+      <div id="srs-phase2" class="hidden flex-col w-full flex-1">
+        <!-- Original question (smaller) -->
+        <p id="srs-result-hint" class="text-xs text-gray-600 uppercase tracking-widest mb-1"></p>
+        <p id="srs-result-front" class="text-base font-medium text-center text-gray-400 leading-snug mb-3"></p>
+
+        <!-- Speech result (hidden if skipped) -->
+        <div id="srs-speech-result" class="hidden rounded-xl p-3 mb-3" style="background:#1a1a24">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs text-gray-500">Erkannt:</span>
+            <span id="srs-speech-score" class="text-xs font-bold"></span>
+          </div>
+          <p id="srs-speech-text" class="text-xs text-gray-400 mb-2 leading-relaxed"></p>
+          <div class="h-1 rounded-full bg-gray-700 overflow-hidden">
+            <div id="srs-speech-bar" class="h-full rounded-full transition-all duration-700"
+                 style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- Translation -->
+        <p id="srs-back-text"
+           class="text-xl font-medium text-center text-indigo-300 leading-snug mb-4 flex-1 flex items-center justify-center"></p>
+
+        <!-- Auto-advance indicator (≥90%) -->
+        <div id="srs-auto-advance" class="hidden text-center text-xs text-emerald-400 mb-2">
+          Weiter in <span id="srs-auto-countdown">3</span>s
+          <button onclick="cancelAutoAdvance()"
+                  class="ml-2 text-gray-600 hover:text-gray-400 transition-colors">✕</button>
+        </div>
+
+        <!-- Retry button -->
+        <button onclick="retrySRSSpeech()"
+                class="w-full py-2 rounded-xl text-sm text-gray-500 border border-gray-800
+                       hover:border-gray-600 hover:text-gray-300 mb-3 transition-colors">
+          🎤 Nochmal versuchen
+        </button>
+
+        <!-- Rating buttons -->
+        <div id="srs-rating-btns" class="grid grid-cols-4 gap-2 w-full">
+          <button onclick="rateSRS(0)" class="btn-again rounded-xl py-3 text-center transition-colors">
+            <div class="text-xs font-bold mb-0.5">Nochmal</div>
+            <div id="lbl-again" class="text-xs opacity-70">&lt; 1 Min</div>
+          </button>
+          <button onclick="rateSRS(1)" class="btn-hard rounded-xl py-3 text-center transition-colors">
+            <div class="text-xs font-bold mb-0.5">Schwer</div>
+            <div id="lbl-hard" class="text-xs opacity-70">–</div>
+          </button>
+          <button onclick="rateSRS(2)" class="btn-good rounded-xl py-3 text-center transition-colors">
+            <div class="text-xs font-bold mb-0.5">Gut</div>
+            <div id="lbl-good" class="text-xs opacity-70">–</div>
+          </button>
+          <button onclick="rateSRS(3)" class="btn-easy rounded-xl py-3 text-center transition-colors">
+            <div class="text-xs font-bold mb-0.5">Einfach</div>
+            <div id="lbl-easy" class="text-xs opacity-70">–</div>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Mini stats row -->
+    <div class="flex gap-4 text-sm text-gray-600">
+      <span>Nochmal: <b id="ss-again" class="text-rose-400">0</b></span>
+      <span>Schwer: <b id="ss-hard"  class="text-orange-400">0</b></span>
+      <span>Gut: <b id="ss-good"     class="text-blue-400">0</b></span>
+      <span>Einfach: <b id="ss-easy" class="text-emerald-400">0</b></span>
+    </div>
+  </div>
+
+  <!-- Complete screen -->
+  <div id="srs-complete" class="hidden text-center py-10">
+    <div class="text-5xl mb-4">🎉</div>
+    <h3 class="text-2xl font-bold mb-1">Session abgeschlossen!</h3>
+    <p class="text-sm text-gray-500 mb-6">Active Recall mit SRS – das ist echter Lernfortschritt.</p>
+    <div class="grid grid-cols-4 gap-3 max-w-sm mx-auto mb-6">
+      <div class="rounded-xl border border-gray-800 p-3 text-center" style="background:#111117">
+        <div id="sc-again" class="text-xl font-bold text-rose-400">0</div>
+        <div class="text-xs text-gray-600">Nochmal</div>
+      </div>
+      <div class="rounded-xl border border-gray-800 p-3 text-center" style="background:#111117">
+        <div id="sc-hard"  class="text-xl font-bold text-orange-400">0</div>
+        <div class="text-xs text-gray-600">Schwer</div>
+      </div>
+      <div class="rounded-xl border border-gray-800 p-3 text-center" style="background:#111117">
+        <div id="sc-good"  class="text-xl font-bold text-blue-400">0</div>
+        <div class="text-xs text-gray-600">Gut</div>
+      </div>
+      <div class="rounded-xl border border-gray-800 p-3 text-center" style="background:#111117">
+        <div id="sc-easy"  class="text-xl font-bold text-emerald-400">0</div>
+        <div class="text-xs text-gray-600">Einfach</div>
+      </div>
+    </div>
+    <button onclick="endSRS()"
+            class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5
+                   rounded-xl font-medium transition-colors">
+      Zurück
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════ DIALOGUE ══════════════════════ -->
+<div id="view-dialogue" class="hidden fade-up">
+  <h2 class="text-2xl font-bold mb-1">Dialogue</h2>
+  <p class="text-sm text-gray-500 mb-6">Freies Gespräch — wende dein Wissen im Kontext an</p>
+
+  <div class="rounded-2xl border border-gray-800 p-5 mb-4" style="background:#111117">
+    <label class="block text-xs text-gray-500 uppercase tracking-widest mb-2">Island</label>
+    <select id="dlg-island-sel" onchange="dlgSelectIsland()"
+            class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-sm
+                   text-gray-200 focus:outline-none focus:border-indigo-500">
+      <option value="">Wähle eine Insel…</option>
+    </select>
+  </div>
+
+  <div id="dlg-start-area" class="hidden text-center py-8">
+    <div class="text-4xl mb-3">💬</div>
+    <p class="text-sm text-gray-500 mb-5">KI erstellt ein passendes Szenario aus deiner Island und führt ein echtes Gespräch mit dir.</p>
+    <button onclick="startDialogue()"
+            class="px-8 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                   text-white font-medium transition-colors">Gespräch starten</button>
+  </div>
+
+  <div id="dlg-chat-area" class="hidden space-y-4">
+    <div id="dlg-scenario" class="text-xs text-indigo-300/70 px-4 py-2.5 rounded-xl
+                                   border border-indigo-500/20 bg-indigo-500/5 leading-relaxed"></div>
+
+    <div id="dlg-messages" class="space-y-3 max-h-[50vh] overflow-y-auto pr-1"></div>
+
+    <div id="dlg-user-turn" class="hidden flex flex-col items-center gap-2 pt-2">
+      <button id="dlg-mic-btn" onclick="toggleDlgMic()"
+              class="flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-indigo-500
+                     bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 font-medium
+                     text-sm transition-colors">
+        <span id="dlg-mic-dot" class="w-2 h-2 rounded-full bg-indigo-400"></span>
+        <span id="dlg-mic-label">Antworten</span>
+      </button>
+    </div>
+
+    <div id="dlg-thinking" class="hidden text-center text-xs text-gray-600 py-2">KI denkt…</div>
+
+    <button onclick="endDialogue()"
+            class="w-full py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700
+                   text-gray-500 text-sm transition-colors mt-2">Gespräch beenden</button>
+  </div>
+</div>
+
+</main>
+
+<!-- ══════════════════════ MODALS ══════════════════════ -->
+
+<!-- Add Island -->
+<div id="modal-island" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/60" style="backdrop-filter:blur(4px)"
+       onclick="closeModal('modal-island')"></div>
+  <div class="relative w-full max-w-md rounded-2xl border border-gray-700 p-6 fade-up"
+       style="background:#16161e">
+    <h3 class="text-lg font-semibold mb-4">Neue Island</h3>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">Thema / Name</label>
+        <input id="in-island-name" type="text" placeholder="z.B. Begrüßungen, Im Restaurant…"
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600
+                      border border-gray-700 focus:border-indigo-500 focus:outline-none"
+               style="background:#1f1f2b">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">Sprache</label>
+        <input id="in-island-lang" type="text" placeholder="z.B. Spanisch, Japanisch…"
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600
+                      border border-gray-700 focus:border-indigo-500 focus:outline-none"
+               style="background:#1f1f2b">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">TTS-Sprache</label>
+        <select id="in-island-tts"
+                class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200
+                       border border-gray-700 focus:border-indigo-500 focus:outline-none"
+                style="background:#1f1f2b">
+          <option value="es-ES">Spanisch (Spanien)</option>
+          <option value="es-MX">Spanisch (Mexiko)</option>
+          <option value="fr-FR">Französisch</option>
+          <option value="it-IT">Italienisch</option>
+          <option value="pt-BR">Portugiesisch (Brasilien)</option>
+          <option value="pt-PT">Portugiesisch (Portugal)</option>
+          <option value="en-US">Englisch (US)</option>
+          <option value="en-GB">Englisch (UK)</option>
+          <option value="de-DE">Deutsch</option>
+          <option value="ja-JP">Japanisch</option>
+          <option value="ko-KR">Koreanisch</option>
+          <option value="zh-CN">Chinesisch (Mandarin)</option>
+          <option value="ru-RU">Russisch</option>
+          <option value="ar-SA">Arabisch</option>
+          <option value="nl-NL">Niederländisch</option>
+          <option value="pl-PL">Polnisch</option>
+          <option value="tr-TR">Türkisch</option>
+          <option value="sv-SE">Schwedisch</option>
+          <option value="nb-NO">Norwegisch</option>
+          <option value="da-DK">Dänisch</option>
+        </select>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button onclick="closeModal('modal-island')"
+              class="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700
+                     text-gray-400 text-sm font-medium transition-colors">Abbrechen</button>
+      <button onclick="saveIsland()"
+              class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                     text-white text-sm font-medium transition-colors">Erstellen</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI Island Generator -->
+<div id="modal-ai-island" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/60" style="backdrop-filter:blur(4px)"
+       onclick="closeModal('modal-ai-island')"></div>
+  <div class="relative w-full max-w-md rounded-2xl border border-gray-700 p-6 fade-up"
+       style="background:#16161e">
+    <h3 class="text-lg font-semibold mb-1">KI-Island generieren ✨</h3>
+    <p class="text-xs text-gray-500 mb-4">GPT erstellt 50 Sätze passend zu deinem Thema und Niveau.</p>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">Island-Name</label>
+        <input id="ai-island-name" type="text" placeholder="z.B. Small Talk im Büro"
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600
+                      border border-gray-700 focus:border-indigo-500 focus:outline-none"
+               style="background:#1f1f2b">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1.5">Sprache</label>
+          <input id="ai-island-lang" type="text" placeholder="z.B. Englisch"
+                 class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600
+                        border border-gray-700 focus:border-indigo-500 focus:outline-none"
+                 style="background:#1f1f2b">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1.5">Niveau</label>
+          <select id="ai-island-level"
+                  class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200
+                         border border-gray-700 focus:border-indigo-500 focus:outline-none"
+                  style="background:#1f1f2b">
+            <option value="A2">A2</option>
+            <option value="B1" selected>B1</option>
+            <option value="B2">B2</option>
+            <option value="C1">C1</option>
+            <option value="C2">C2</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">TTS-Sprache</label>
+        <select id="ai-island-tts"
+                class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200
+                       border border-gray-700 focus:border-indigo-500 focus:outline-none"
+                style="background:#1f1f2b">
+          <option value="en-US">Englisch (US)</option>
+          <option value="en-GB">Englisch (UK)</option>
+          <option value="es-ES">Spanisch (Spanien)</option>
+          <option value="es-MX">Spanisch (Mexiko)</option>
+          <option value="fr-FR">Französisch</option>
+          <option value="it-IT">Italienisch</option>
+          <option value="pt-BR">Portugiesisch (Brasilien)</option>
+          <option value="pt-PT">Portugiesisch (Portugal)</option>
+          <option value="de-DE">Deutsch</option>
+          <option value="ja-JP">Japanisch</option>
+          <option value="ko-KR">Koreanisch</option>
+          <option value="zh-CN">Chinesisch (Mandarin)</option>
+          <option value="ru-RU">Russisch</option>
+          <option value="ar-SA">Arabisch</option>
+          <option value="nl-NL">Niederländisch</option>
+          <option value="pl-PL">Polnisch</option>
+          <option value="tr-TR">Türkisch</option>
+          <option value="sv-SE">Schwedisch</option>
+          <option value="nb-NO">Norwegisch</option>
+          <option value="da-DK">Dänisch</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">Thema / Beschreibung</label>
+        <textarea id="ai-island-topic" rows="3"
+                  placeholder="z.B. Meetings leiten, Feedback geben, E-Mails schreiben — typische Business-Situationen im Büroalltag."
+                  class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600
+                         border border-gray-700 focus:border-indigo-500 focus:outline-none resize-none"
+                  style="background:#1f1f2b"></textarea>
+      </div>
+    </div>
+    <div id="ai-island-status" class="hidden mt-3 text-xs text-center text-violet-400 py-2">
+      ✨ KI generiert deine Island…
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button onclick="closeModal('modal-ai-island')"
+              class="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700
+                     text-gray-400 text-sm font-medium transition-colors">Abbrechen</button>
+      <button id="ai-island-btn" onclick="generateAIIsland()"
+              class="flex-1 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500
+                     text-white text-sm font-medium transition-colors">Generieren</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Sentence -->
+<div id="modal-sentence" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/60" style="backdrop-filter:blur(4px)"
+       onclick="closeModal('modal-sentence')"></div>
+  <div class="relative w-full max-w-md rounded-2xl border border-gray-700 p-6 fade-up"
+       style="background:#16161e">
+    <h3 id="modal-sent-title" class="text-lg font-semibold mb-4">Satz hinzufügen</h3>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">Satz in Zielsprache</label>
+        <textarea id="in-sent-target" rows="2"
+                  placeholder="Der Satz in der Sprache, die du lernst…"
+                  class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600
+                         border border-gray-700 focus:border-indigo-500 focus:outline-none resize-none"
+                  style="background:#1f1f2b"></textarea>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">Deutsche Übersetzung</label>
+        <textarea id="in-sent-native" rows="2"
+                  placeholder="Die Bedeutung auf Deutsch…"
+                  class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600
+                         border border-gray-700 focus:border-indigo-500 focus:outline-none resize-none"
+                  style="background:#1f1f2b"></textarea>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">Kontext / Notiz (optional)</label>
+        <input id="in-sent-notes" type="text" placeholder="Wann / wie wird dieser Satz verwendet?"
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600
+                      border border-gray-700 focus:border-indigo-500 focus:outline-none"
+               style="background:#1f1f2b">
+      </div>
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button onclick="closeModal('modal-sentence')"
+              class="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700
+                     text-gray-400 text-sm font-medium transition-colors">Abbrechen</button>
+      <button onclick="saveSentence()"
+              class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                     text-white text-sm font-medium transition-colors">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Auth / Sync -->
+<div id="modal-auth" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/60" style="backdrop-filter:blur(4px)"
+       onclick="closeModal('modal-auth')"></div>
+  <div class="relative w-full max-w-md rounded-2xl border border-gray-700 p-6 fade-up"
+       style="background:#16161e">
+
+    <!-- Logged out -->
+    <div id="auth-logged-out">
+      <h3 class="text-lg font-semibold mb-1">Account</h3>
+      <p class="text-xs text-gray-500 mb-4">Einloggen um Daten geräteübergreifend zu synchronisieren</p>
+      <div class="space-y-3">
+        <input id="auth-email" type="email" placeholder="E-Mail"
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
+                      focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b">
+        <input id="auth-pass" type="password" placeholder="Passwort"
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200 border border-gray-700
+                      focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b"
+               onkeydown="if(event.key==='Enter')loginUser()">
+        <p id="auth-error" class="text-xs text-rose-400 min-h-[16px]"></p>
+      </div>
+      <div class="flex gap-3 mt-4">
+        <button onclick="signupUser()"
+                class="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700
+                       text-gray-300 text-sm font-medium transition-colors">Registrieren</button>
+        <button id="auth-login-btn" onclick="loginUser()"
+                class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                       text-white text-sm font-medium transition-colors">Einloggen</button>
+      </div>
+    </div>
+
+    <!-- Logged in -->
+    <div id="auth-logged-in" class="hidden">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-9 h-9 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+          </svg>
+        </div>
+        <div>
+          <p id="auth-user-name" class="hidden text-sm font-semibold text-gray-100"></p>
+          <p id="auth-user-email" class="text-xs text-gray-500"></p>
+          <p class="text-xs text-gray-600">Letzter Sync: <span id="auth-last-sync">–</span></p>
+          <p class="text-xs text-violet-400 font-medium mt-0.5"><span id="credit-balance">–</span></p>
+        </div>
+      </div>
+      <!-- Name bearbeiten -->
+      <div class="mb-4">
+        <label class="text-xs text-gray-500 mb-1.5 block uppercase tracking-widest">Anzeigename</label>
+        <div class="flex gap-2">
+          <input id="auth-name-input" type="text" placeholder="Name eingeben…"
+                 class="flex-1 rounded-xl px-3 py-2 text-sm text-gray-200 border border-gray-700
+                        focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b"
+                 onkeydown="if(event.key==='Enter')saveDisplayName()">
+          <button onclick="saveDisplayName()"
+                  class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors">
+            Speichern
+          </button>
+        </div>
+        <p id="auth-name-status" class="text-xs text-emerald-400 mt-1 min-h-[16px]"></p>
+      </div>
+
+      <p id="auth-sync-status" class="text-xs text-emerald-400 mb-3 min-h-[16px]"></p>
+      <div class="flex gap-2 mb-2">
+        <button id="auth-upload-btn" onclick="syncUpload()"
+                class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                       text-white text-sm font-semibold transition-colors flex items-center justify-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+          Hochladen
+        </button>
+        <button id="auth-download-btn" onclick="syncDownload()"
+                class="flex-1 py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600
+                       text-gray-200 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          Herunterladen
+        </button>
+      </div>
+      <button onclick="logoutUser()"
+              class="w-full py-2 rounded-xl bg-gray-800 hover:bg-gray-700
+                     text-gray-400 text-sm font-medium transition-colors">Ausloggen</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Settings -->
+<div id="modal-settings" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/60" style="backdrop-filter:blur(4px)"
+       onclick="closeModal('modal-settings')"></div>
+  <div class="relative w-full max-w-md rounded-2xl border border-gray-700 p-6 fade-up"
+       style="background:#16161e">
+    <h3 class="text-lg font-semibold mb-4">Einstellungen</h3>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1.5">Neue Karten pro Tag (max.)</label>
+        <input id="set-new-per-day" type="number" min="1" max="100"
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-gray-200
+                      border border-gray-700 focus:border-indigo-500 focus:outline-none"
+               style="background:#1f1f2b">
+      </div>
+      <div class="pt-3 border-t border-gray-800">
+        <p class="text-xs text-gray-600 uppercase tracking-widest mb-3">Daten</p>
+        <button onclick="exportData()"
+                class="w-full mb-2 py-2 rounded-xl bg-gray-800 hover:bg-gray-700
+                       text-gray-300 text-sm font-medium transition-colors">Exportieren (JSON)</button>
+        <button onclick="triggerImport()"
+                class="w-full mb-2 py-2 rounded-xl bg-gray-800 hover:bg-gray-700
+                       text-gray-300 text-sm font-medium transition-colors">Importieren</button>
+        <input id="file-import" type="file" accept=".json" class="hidden" onchange="importData(event)">
+        <button onclick="clearData()"
+                class="w-full py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20
+                       text-rose-400 border border-rose-500/15 text-sm font-medium transition-colors">
+          Alle Daten löschen
+        </button>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button onclick="closeModal('modal-settings')"
+              class="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700
+                     text-gray-400 text-sm font-medium transition-colors">Abbrechen</button>
+      <button onclick="saveSettings()"
+              class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                     text-white text-sm font-medium transition-colors">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Library Modal -->
+<div id="modal-library" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/60" style="backdrop-filter:blur(4px)"
+       onclick="closeModal('modal-library')"></div>
+  <div class="relative w-full max-w-md rounded-2xl border border-gray-700 p-6 fade-up" style="background:#16161e">
+    <h3 class="text-lg font-semibold mb-1">Island-Bibliothek</h3>
+    <p class="text-xs text-gray-500 mb-4">Fertige Pakete mit einem Klick importieren</p>
+    <div id="library-list" class="space-y-3"></div>
+    <button onclick="closeModal('modal-library')"
+            class="w-full mt-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700
+                   text-gray-400 text-sm font-medium transition-colors">Schließen</button>
+  </div>
+</div>
+
+
+<!-- PASSWORD RECOVERY -->
+<div id="modal-recovery" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center p-6"
+     style="background:#09090f">
+  <div class="text-2xl font-bold text-indigo-400 mb-1">⚡ HyperLingua</div>
+  <p class="text-sm text-gray-500 mb-6">Neues Passwort setzen</p>
+  <div class="w-full max-w-sm space-y-3">
+    <input id="recovery-pass" type="password" placeholder="Neues Passwort (mind. 6 Zeichen)"
+           class="w-full rounded-xl px-4 py-3 text-sm text-gray-200 border border-gray-700
+                  focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b"
+           onkeydown="if(event.key==='Enter')submitPasswordReset()">
+    <p id="recovery-error" class="text-xs text-rose-400 min-h-[16px]"></p>
+    <button onclick="submitPasswordReset()"
+            class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                   text-white font-semibold transition-colors">Passwort speichern</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="hidden fixed bottom-24 sm:bottom-6 left-1/2 -translate-x-1/2 z-50
+                        px-4 py-2.5 rounded-xl text-sm text-gray-300 shadow-xl pointer-events-none
+                        transition-opacity duration-300"
+     style="background:#1f1f2b; border:1px solid #374151; white-space:nowrap"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
