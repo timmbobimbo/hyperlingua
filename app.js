@@ -87,11 +87,30 @@ async function callProxy(action, params) {
   return data;
 }
 
+let gateMode = 'login';
+
+function gateSetMode(mode) {
+  gateMode = mode;
+  const isLogin = mode === 'login';
+  const activeClass   = 'flex-1 py-2 rounded-lg text-sm font-semibold transition-colors bg-indigo-600 text-white';
+  const inactiveClass = 'flex-1 py-2 rounded-lg text-sm font-medium transition-colors text-gray-400 hover:text-gray-200';
+  document.getElementById('gate-tab-login').className    = isLogin ? activeClass : inactiveClass;
+  document.getElementById('gate-tab-register').className = isLogin ? inactiveClass : activeClass;
+  document.getElementById('gate-submit-btn').textContent = isLogin ? 'Einloggen' : 'Konto erstellen';
+  document.getElementById('gate-register-hint').classList.toggle('hidden', isLogin);
+  document.getElementById('gate-error').textContent = '';
+  document.getElementById('gate-error').style.color = '';
+}
+
+function gateSubmit() {
+  if (gateMode === 'login') gateLogin(); else gateSignup();
+}
+
 async function gateLogin() {
   const email = document.getElementById('gate-email').value.trim();
   const pass  = document.getElementById('gate-pass').value;
   const err   = document.getElementById('gate-error');
-  err.textContent = '';
+  err.style.color = ''; err.textContent = '';
   const { error } = await supa.auth.signInWithPassword({ email, password: pass });
   if (error) err.textContent = error.message;
 }
@@ -100,7 +119,7 @@ async function gateSignup() {
   const email = document.getElementById('gate-email').value.trim();
   const pass  = document.getElementById('gate-pass').value;
   const err   = document.getElementById('gate-error');
-  err.textContent = '';
+  err.style.color = ''; err.textContent = '';
   if (!email || pass.length < 6) { err.textContent = 'E-Mail und mind. 6-stelliges Passwort eingeben.'; return; }
   const { error } = await supa.auth.signUp({ email, password: pass });
   if (error) { err.textContent = error.message; }

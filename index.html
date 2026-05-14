@@ -20,24 +20,39 @@
 <div id="auth-gate" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center p-6"
      style="background:#09090f">
   <div class="text-3xl font-bold text-indigo-400 mb-1">⚡ HyperLingua</div>
-  <p class="text-sm text-gray-500 mb-8">Sprachenlernen mit KI — kostenlos starten</p>
-  <div class="w-full max-w-sm space-y-3">
-    <input id="gate-email" type="email" placeholder="E-Mail"
-           class="w-full rounded-xl px-4 py-3 text-sm text-gray-200 border border-gray-700
-                  focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b">
-    <input id="gate-pass" type="password" placeholder="Passwort"
-           class="w-full rounded-xl px-4 py-3 text-sm text-gray-200 border border-gray-700
-                  focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b"
-           onkeydown="if(event.key==='Enter')gateLogin()">
-    <p id="gate-error" class="text-xs text-rose-400 min-h-[16px]"></p>
-    <button onclick="gateLogin()"
-            class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500
-                   text-white font-semibold transition-colors">Einloggen</button>
-    <button onclick="gateSignup()"
-            class="w-full py-3 rounded-xl bg-gray-800 hover:bg-gray-700
-                   text-gray-300 font-medium transition-colors">Registrieren</button>
+  <p class="text-sm text-gray-500 mb-6">Sprachenlernen mit KI — kostenlos starten</p>
+
+  <div class="w-full max-w-sm">
+    <!-- Tab-Toggle -->
+    <div class="flex rounded-xl mb-5 p-1 gap-1" style="background:#1f1f2b">
+      <button id="gate-tab-login" onclick="gateSetMode('login')"
+              class="flex-1 py-2 rounded-lg text-sm font-semibold transition-colors bg-indigo-600 text-white">
+        Einloggen
+      </button>
+      <button id="gate-tab-register" onclick="gateSetMode('register')"
+              class="flex-1 py-2 rounded-lg text-sm font-medium transition-colors text-gray-400 hover:text-gray-200">
+        Registrieren
+      </button>
+    </div>
+
+    <div class="space-y-3">
+      <input id="gate-email" type="email" placeholder="E-Mail"
+             class="w-full rounded-xl px-4 py-3 text-sm text-gray-200 border border-gray-700
+                    focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b">
+      <input id="gate-pass" type="password" placeholder="Passwort (mind. 6 Zeichen)"
+             class="w-full rounded-xl px-4 py-3 text-sm text-gray-200 border border-gray-700
+                    focus:border-indigo-500 focus:outline-none" style="background:#1f1f2b"
+             onkeydown="if(event.key==='Enter')gateSubmit()">
+      <p id="gate-error" class="text-xs text-rose-400 min-h-[16px]"></p>
+      <button id="gate-submit-btn" onclick="gateSubmit()"
+              class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                     text-white font-semibold transition-colors">Einloggen</button>
+    </div>
   </div>
-  <p class="text-xs text-gray-700 mt-8">500 kostenlose Credits bei Registrierung</p>
+
+  <p id="gate-register-hint" class="hidden text-xs text-gray-600 mt-6 text-center">
+    500 kostenlose Credits bei Registrierung
+  </p>
 </div>
 
 <!-- NAV -->
