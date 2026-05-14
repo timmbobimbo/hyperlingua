@@ -259,18 +259,19 @@ function getSRSStats(filterIslandId) {
   const now     = Date.now();
   const eod     = new Date(); eod.setHours(23,59,59,999);
   const eodMs   = eod.getTime();
-  let due=0, newC=0, learning=0;
+  let due=0, newC=0, learning=0, newLocked=0;
 
   islands.forEach(island => {
     if (filterIslandId && filterIslandId !== 'all' && island.id !== filterIslandId) return;
     (island.sentences||[]).forEach(s => {
       const st = s.srs?.state || 'new';
-      if      (st === 'new')      newC++;
+      if      (st === 'new' &&  s.shadowedAt) newC++;
+      else if (st === 'new' && !s.shadowedAt) newLocked++;
       else if (st === 'learning' && (s.srs?.due||0) <= now) learning++;
       else if (st === 'review'   && (s.srs?.due||0) <= eodMs) due++;
     });
   });
-  return { due, newC, learning };
+  return { due, newC, learning, newLocked };
 }
 
 // ── navigation ────────────────────────────────────────────────
@@ -968,6 +969,18 @@ function showPronResult(html, score) {
   const p3 = document.getElementById('shadow-phase3');
   p3.classList.remove('hidden'); p3.classList.add('flex');
 
+  // Satz freischalten wenn ≥50% (einmalig)
+  if (score >= 50) {
+    const sent = shadow.sentences[shadow.idx];
+    if (!sent.shadowedAt) {
+      const islands = DB.islands();
+      const island  = islands.find(i => i.id === shadow.islandId);
+      const dbSent  = (island?.sentences || []).find(s => s.id === sent.id);
+      if (dbSent) { dbSent.shadowedAt = Date.now(); DB.setIslands(islands); }
+      sent.shadowedAt = Date.now();
+    }
+  }
+
   // Korrekter Zielsatz + deutsche Bedeutung (bereits durch renderShadowCard gesetzt)
   document.getElementById('shadow-target-p3').textContent = shadow.sentences[shadow.idx].target;
 
@@ -1070,6 +1083,14 @@ function refreshSRSCounts() {
   const total = stats.due + stats.learning + stats.newC;
   document.getElementById('srs-no-cards').classList.toggle('hidden', total > 0);
   document.getElementById('srs-start-btn').disabled = total === 0;
+
+  const lockedHint = document.getElementById('srs-locked-hint');
+  if (stats.newLocked > 0) {
+    document.getElementById('srs-locked-count').textContent = stats.newLocked;
+    lockedHint.classList.remove('hidden');
+  } else {
+    lockedHint.classList.add('hidden');
+  }
   document.getElementById('srs-start-btn').className = total > 0
     ? 'w-full py-3 rounded-xl font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors'
     : 'w-full py-3 rounded-xl font-semibold bg-gray-800 text-gray-600 cursor-not-allowed';
@@ -1097,7 +1118,7 @@ function startSRS() {
       const entry={ islandId:island.id, ttsLang:island.ttsLang, sentId:s.id };
       if      (st==='review'   && (s.srs?.due||0)<=eodMs) reviewCards.push(entry);
       else if (st==='learning' && (s.srs?.due||0)<=now)   learningCards.push(entry);
-      else if (st==='new')                                 newCards.push(entry);
+      else if (st==='new' && s.shadowedAt)                 newCards.push(entry);
     });
   });
 
