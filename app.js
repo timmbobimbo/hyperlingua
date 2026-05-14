@@ -195,6 +195,32 @@ async function syncDownload() {
   }
 }
 
+// ── Auto-Sync (debounced, silent) ────────────────────────────
+let autoSyncTimer = null;
+function autoSync() {
+  if (!authUser) return;
+  if (autoSyncTimer) clearTimeout(autoSyncTimer);
+  autoSyncTimer = setTimeout(async () => {
+    autoSyncTimer = null;
+    try {
+      const now = new Date().toISOString();
+      const { error } = await supa.from('user_data').upsert({
+        id: authUser.id,
+        islands:    DB.islands(),
+        settings:   DB.settings(),
+        history:    DB.history(),
+        updated_at: now
+      });
+      if (!error) {
+        localStorage.setItem('hl_updated_at', now);
+        localStorage.setItem('hl_last_sync',  now);
+        const el = document.getElementById('auth-last-sync');
+        if (el) el.textContent = new Date().toLocaleString('de');
+      }
+    } catch(e) { /* silent */ }
+  }, 10000);
+}
+
 // ── SM-2 algorithm ────────────────────────────────────────────
 const SRS0 = { state:'new', interval:0, easeFactor:2.5, repetitions:0, due:0, lapses:0 };
 
@@ -536,6 +562,7 @@ async function generateAIIsland() {
     const islands = DB.islands();
     islands.push(island);
     DB.setIslands(islands);
+    autoSync();
     closeModal('modal-ai-island');
     renderIslands();
     showDetail(island.id);
@@ -554,6 +581,7 @@ function saveIsland() {
   const islands = DB.islands();
   islands.push({ id:uid(), name, language:lang||'?', ttsLang:tts, sentences:[], createdAt:Date.now() });
   DB.setIslands(islands);
+  autoSync();
   closeModal('modal-island');
   renderIslands();
 }
@@ -599,6 +627,7 @@ function saveSentence() {
     island.sentences.push({ id:uid(), target, native, notes, addedAt:Date.now(), srs:{...SRS0} });
   }
   DB.setIslands(islands);
+  autoSync();
   closeModal('modal-sentence');
   renderSentences(island);
 }
@@ -609,6 +638,7 @@ function deleteSentence(islandId, sentId) {
   if (!island) return;
   island.sentences = (island.sentences||[]).filter(s=>s.id!==sentId);
   DB.setIslands(islands);
+  autoSync();
   renderSentences(island);
 }
 
@@ -616,6 +646,7 @@ function deleteIsland() {
   if (!activeIslandId) return;
   if (!confirm('Island und alle Sätze wirklich löschen?')) return;
   DB.setIslands(DB.islands().filter(i=>i.id!==activeIslandId));
+  autoSync();
   closeDetail(); renderIslands();
 }
 
@@ -979,7 +1010,7 @@ function showPronResult(html, score) {
       const islands = DB.islands();
       const island  = islands.find(i => i.id === shadow.islandId);
       const dbSent  = (island?.sentences || []).find(s => s.id === sent.id);
-      if (dbSent) { dbSent.shadowedAt = Date.now(); DB.setIslands(islands); }
+      if (dbSent) { dbSent.shadowedAt = Date.now(); DB.setIslands(islands); autoSync(); }
       sent.shadowedAt = Date.now();
     }
   }
@@ -1391,6 +1422,7 @@ function rateSRS(rating) {
   hist[t].reviewed++;
   if (oldSrs.state==='new') hist[t].newLearned++;
   DB.setHistory(hist);
+  autoSync();
 
   // Update counts display
   const key=['hard','good','easy'][rating-1];
@@ -1464,6 +1496,7 @@ async function importLibraryIsland(file, name) {
     const islands = DB.islands();
     islands.push(island);
     DB.setIslands(islands);
+    autoSync();
     closeModal('modal-library');
     nav('islands');
     renderIslands();
@@ -1476,6 +1509,7 @@ async function importLibraryIsland(file, name) {
 function saveSettings() {
   const n = Math.max(1, Math.min(100, parseInt(document.getElementById('set-new-per-day').value)||20));
   DB.setSettings({ newPerDay:n });
+  autoSync();
   closeModal('modal-settings');
 }
 
