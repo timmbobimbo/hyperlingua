@@ -740,7 +740,8 @@ function loadShadowIsland() {
     document.getElementById('shadow-player').classList.add('hidden');
     return;
   }
-  shadow.islandId=id; shadow.sentences=island.sentences; shadow.idx=0; shadow.ttsLang=island.ttsLang||'en-US';
+  const savedIdx = parseInt(localStorage.getItem('hl_shadow_idx_' + id)) || 0;
+  shadow.islandId=id; shadow.sentences=island.sentences; shadow.idx=Math.min(savedIdx, island.sentences.length-1); shadow.ttsLang=island.ttsLang||'en-US';
   document.getElementById('shadow-empty').classList.add('hidden');
   document.getElementById('shadow-player').classList.remove('hidden');
   renderShadowCard();
@@ -763,6 +764,8 @@ function renderShadowCard() {
   p3.classList.add('hidden'); p3.classList.remove('flex');
   cancelShadowAutoAdvance();
   stopTTS();
+
+  localStorage.setItem('hl_shadow_idx_' + shadow.islandId, shadow.idx);
 
   getIPA(s.target, shadow.ttsLang || 'en-US').then(ipa => {
     document.getElementById('shadow-ipa').textContent = ipa;
