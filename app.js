@@ -753,6 +753,7 @@ function renderShadowCard() {
   document.getElementById('shadow-translation').textContent      = s.native || '';
   document.getElementById('shadow-ipa').textContent              = '…';
 
+  document.getElementById('shadow-translation-pre').classList.add('opacity-0');
   document.getElementById('shadow-sentence-wrap').classList.add('opacity-0');
   document.getElementById('shadow-rec-area').classList.add('hidden');
   document.getElementById('pron-text').classList.add('opacity-0');
@@ -765,6 +766,11 @@ function renderShadowCard() {
   getIPA(s.target, shadow.ttsLang || 'en-US').then(ipa => {
     document.getElementById('shadow-ipa').textContent = ipa;
   });
+
+  // Translation sofort einblenden — Deutsch sehen während Englisch spielt
+  setTimeout(() => {
+    document.getElementById('shadow-translation-pre').classList.remove('opacity-0');
+  }, 80);
 
   const rate = parseFloat(document.getElementById('tts-rate').value) || 1;
   ttsSpeak(s.target, rate, () => {
@@ -998,6 +1004,7 @@ function retryShadow() {
   const p3 = document.getElementById('shadow-phase3');
   p3.classList.add('hidden'); p3.classList.remove('flex');
   document.getElementById('shadow-phase12').classList.remove('hidden');
+  document.getElementById('shadow-translation-pre').classList.remove('opacity-0');
   document.getElementById('shadow-sentence-wrap').classList.remove('opacity-0');
   document.getElementById('shadow-rec-area').classList.remove('hidden');
   document.getElementById('rec-dot').classList.remove('animate-pulse');

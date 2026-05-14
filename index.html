@@ -370,12 +370,16 @@
       <!-- ── PHASE 1 + 2: Hören & Nachsprechen ── -->
       <div id="shadow-phase12" class="flex flex-col items-center">
 
-        <!-- Sentence (hidden initially, fades in after TTS) -->
+        <!-- German translation (visible immediately while TTS plays) -->
+        <p id="shadow-translation-pre"
+           class="text-sm text-gray-400 italic text-center mb-4 w-full
+                  transition-opacity duration-500 opacity-0"></p>
+
+        <!-- Sentence + IPA (fades in after TTS ends) -->
         <div id="shadow-sentence-wrap"
-             class="text-center mb-6 transition-opacity duration-500 opacity-0 w-full">
+             class="text-center mb-5 transition-opacity duration-500 opacity-0 w-full">
           <p id="shadow-sentence" class="text-2xl font-medium text-gray-100 leading-snug mb-1"></p>
           <p id="shadow-ipa" class="text-xs text-indigo-400/60 font-mono tracking-wide min-h-[1.2em]"></p>
-          <p id="shadow-translation-pre" class="text-xs text-gray-500 italic mt-2"></p>
         </div>
 
         <!-- Play button -->
