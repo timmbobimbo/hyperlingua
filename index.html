@@ -419,22 +419,23 @@
       <!-- ── PHASE 3: Feedback ── -->
       <div id="shadow-phase3" class="hidden flex-col items-center w-full">
 
-        <!-- Big score -->
-        <div id="pron-score-big" class="text-5xl font-bold tabular-nums mb-1"></div>
-        <div id="pron-score-label" class="text-xs text-gray-500 mb-4"></div>
+        <!-- German translation (top, prominent) -->
+        <p id="shadow-translation"
+           class="text-2xl font-medium text-gray-400 italic text-center mb-2 w-full"></p>
+
+        <!-- Word highlighting (delayed) -->
+        <p id="pron-text"
+           class="text-base text-gray-300 text-center leading-relaxed mb-5
+                  opacity-0 transition-opacity duration-500"></p>
+
+        <!-- Score label + number -->
+        <div id="pron-score-big" class="text-xl font-semibold mb-0.5"></div>
+        <div id="pron-score-label" class="text-2xl font-bold tabular-nums mb-3"></div>
 
         <!-- Score bar -->
         <div class="h-1 rounded-full overflow-hidden w-full mb-4" style="background:#1f1f2b">
           <div id="pron-bar" class="h-full rounded-full transition-all duration-700" style="width:0%"></div>
         </div>
-
-        <!-- Word highlighting (delayed) -->
-        <p id="pron-text"
-           class="text-sm text-gray-400 text-center leading-relaxed mb-4
-                  opacity-0 transition-opacity duration-500"></p>
-
-        <!-- Translation reveal -->
-        <p id="shadow-translation" class="text-sm text-indigo-300/70 text-center italic mb-5"></p>
 
         <!-- Auto-advance -->
         <div id="shadow-auto-advance" class="hidden text-xs text-emerald-400 text-center mb-3">
