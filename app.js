@@ -960,7 +960,7 @@ function lev(a,b){
 function showPronResult(html, score) {
   let label, barColor, scoreClass;
   if      (score >= 85) { label = 'Ausgezeichnet! 🎉'; barColor = '#34d399'; scoreClass = 'text-emerald-400'; }
-  else if (score >= 65) { label = 'Gut! 👍';           barColor = '#818cf8'; scoreClass = 'text-indigo-400'; }
+  else if (score >= 65) { label = 'Gut 👍';            barColor = '#818cf8'; scoreClass = 'text-indigo-400'; }
   else if (score >= 40) { label = 'Üb weiter 💪';      barColor = '#fbbf24'; scoreClass = 'text-amber-400'; }
   else                  { label = 'Nochmal';            barColor = '#f87171'; scoreClass = 'text-rose-400'; }
 
@@ -968,24 +968,40 @@ function showPronResult(html, score) {
   const p3 = document.getElementById('shadow-phase3');
   p3.classList.remove('hidden'); p3.classList.add('flex');
 
-  const scoreBig = document.getElementById('pron-score-big');
-  scoreBig.textContent = label;
-  scoreBig.className = 'text-xl font-semibold mb-0.5 ' + scoreClass;
-  const scoreLabel = document.getElementById('pron-score-label');
-  scoreLabel.textContent = score + '%';
-  scoreLabel.className = 'text-2xl font-bold tabular-nums mb-4 ' + scoreClass;
+  // Korrekter Zielsatz + deutsche Bedeutung (bereits durch renderShadowCard gesetzt)
+  document.getElementById('shadow-target-p3').textContent = shadow.sentences[shadow.idx].target;
 
-  const bar = document.getElementById('pron-bar');
-  bar.style.backgroundColor = barColor;
-  bar.style.width = '0%';
-  setTimeout(() => bar.style.width = score + '%', 50);
-
+  // Erkannter Satz mit Highlighting (verzögert)
   const pText = document.getElementById('pron-text');
   pText.innerHTML = html;
   pText.classList.add('opacity-0');
   setTimeout(() => pText.classList.remove('opacity-0'), 400);
 
-  if (score >= 85) {
+  // Score: eine Zeile, subtil
+  const scoreInline = document.getElementById('pron-score-inline');
+  scoreInline.textContent = label + ' · ' + score + '%';
+  scoreInline.className = 'text-sm font-medium mb-2 ' + scoreClass;
+
+  // Score-Bar
+  const bar = document.getElementById('pron-bar');
+  bar.style.backgroundColor = barColor;
+  bar.style.width = '0%';
+  setTimeout(() => bar.style.width = score + '%', 50);
+
+  // Kontextueller Hinweis bei niedrigem Score
+  const hint = document.getElementById('shadow-hint');
+  if (score < 30) {
+    hint.textContent = 'Zielsatz kaum erkannt — versuch ihn nochmal langsam.';
+    hint.classList.remove('hidden');
+  } else if (score < 50) {
+    hint.textContent = 'Fast — ein Wort fehlt oder ist abgewichen.';
+    hint.classList.remove('hidden');
+  } else {
+    hint.classList.add('hidden');
+  }
+
+  // Auto-Continue nur bei ≥95%, 1s Pause dann 4s Countdown
+  if (score >= 95) {
     setTimeout(() => {
       let secs = 4;
       document.getElementById('shadow-auto-advance').classList.remove('hidden');
@@ -995,7 +1011,7 @@ function showPronResult(html, score) {
         if (secs <= 0) { cancelShadowAutoAdvance(); shadowNext(); }
         else document.getElementById('shadow-auto-countdown').textContent = secs;
       }, 1000);
-    }, 800);
+    }, 1000);
   }
 }
 
@@ -1007,6 +1023,7 @@ function retryShadow() {
   document.getElementById('shadow-translation-pre').classList.remove('opacity-0');
   document.getElementById('shadow-sentence-wrap').classList.remove('opacity-0');
   document.getElementById('shadow-rec-area').classList.remove('hidden');
+  document.getElementById('shadow-hint').classList.add('hidden');
   document.getElementById('rec-dot').classList.remove('animate-pulse');
   document.getElementById('rec-label').textContent = 'Halten zum Nachsprechen';
   document.getElementById('btn-record').classList.remove('bg-rose-500/20');

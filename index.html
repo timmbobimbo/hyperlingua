@@ -419,37 +419,43 @@
       <!-- ── PHASE 3: Feedback ── -->
       <div id="shadow-phase3" class="hidden flex-col items-center w-full">
 
-        <!-- German translation (top, prominent) -->
-        <p id="shadow-translation"
-           class="text-2xl font-medium text-gray-400 italic text-center mb-2 w-full"></p>
+        <!-- 1. Korrekter englischer Zielsatz -->
+        <p id="shadow-target-p3"
+           class="text-2xl font-medium text-gray-100 text-center leading-snug mb-1 w-full"></p>
 
-        <!-- Word highlighting (delayed) -->
+        <!-- 2. Deutsche Bedeutung -->
+        <p id="shadow-translation"
+           class="text-sm text-gray-500 italic text-center mb-4 w-full"></p>
+
+        <!-- 3. Erkannter Satz mit Word-Highlighting (verzögert) -->
         <p id="pron-text"
-           class="text-base text-gray-300 text-center leading-relaxed mb-5
+           class="text-sm text-gray-400 text-center leading-relaxed mb-3
                   opacity-0 transition-opacity duration-500"></p>
 
-        <!-- Score label + number -->
-        <div id="pron-score-big" class="text-xl font-semibold mb-0.5"></div>
-        <div id="pron-score-label" class="text-2xl font-bold tabular-nums mb-3"></div>
+        <!-- 4. Score (inline, subtil) -->
+        <div id="pron-score-inline" class="text-sm font-medium mb-2"></div>
 
-        <!-- Score bar -->
-        <div class="h-1 rounded-full overflow-hidden w-full mb-4" style="background:#1f1f2b">
+        <!-- 5. Score-Bar (dünn) -->
+        <div class="h-0.5 rounded-full overflow-hidden w-full mb-3" style="background:#1f1f2b">
           <div id="pron-bar" class="h-full rounded-full transition-all duration-700" style="width:0%"></div>
         </div>
 
-        <!-- Auto-advance -->
+        <!-- 6. Kurzer Hinweis bei niedrigem Score -->
+        <p id="shadow-hint" class="hidden text-xs text-gray-600 text-center mb-3"></p>
+
+        <!-- 7. Auto-advance -->
         <div id="shadow-auto-advance" class="hidden text-xs text-emerald-400 text-center mb-3">
-          Weiter in <span id="shadow-auto-countdown">2</span>s
+          Weiter in <span id="shadow-auto-countdown">4</span>s
           <button onclick="cancelShadowAutoAdvance()"
                   class="ml-2 text-gray-600 hover:text-gray-400 transition-colors">✕</button>
         </div>
 
-        <!-- Two action buttons -->
+        <!-- 8. Buttons -->
         <div class="grid grid-cols-2 gap-3 w-full">
           <button onclick="retryShadow()"
                   class="py-3 rounded-xl text-sm font-medium bg-gray-800 hover:bg-gray-700
                          text-gray-300 transition-colors">
-            🔄 Nochmal
+            🔄 Nochmal hören
           </button>
           <button onclick="shadowNext()"
                   class="py-3 rounded-xl text-sm font-medium bg-indigo-600 hover:bg-indigo-500
