@@ -48,6 +48,8 @@ function updateAuthUI() {
     const nameEl = document.getElementById('auth-user-name');
     if (displayName) { nameEl.textContent = displayName; nameEl.classList.remove('hidden'); }
     else { nameEl.classList.add('hidden'); }
+    const navName = document.getElementById('nav-user-name');
+    if (navName) { if (displayName) { navName.textContent = displayName; navName.classList.remove('hidden'); } else { navName.classList.add('hidden'); } }
     document.getElementById('auth-user-email').textContent = authUser.email;
     const nameInput = document.getElementById('auth-name-input');
     if (nameInput) nameInput.value = displayName || '';
@@ -58,6 +60,8 @@ function updateAuthUI() {
   } else {
     gate.classList.remove('hidden');
     dot.classList.add('hidden');
+    const navName = document.getElementById('nav-user-name');
+    if (navName) navName.classList.add('hidden');
     document.getElementById('auth-logged-out').classList.remove('hidden');
     document.getElementById('auth-logged-in').classList.add('hidden');
   }
