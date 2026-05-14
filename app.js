@@ -31,9 +31,33 @@ async function initAuth() {
       document.getElementById('auth-gate').classList.add('hidden');
       return;
     }
+    const wasLoggedOut = !authUser;
     authUser = session?.user ?? null;
     updateAuthUI();
+    if (authUser && wasLoggedOut) autoSyncOnLogin();
   });
+}
+
+async function autoSyncOnLogin() {
+  if (!authUser) return;
+  try {
+    const { data: meta } = await supa
+      .from('user_data').select('updated_at').eq('id', authUser.id).maybeSingle();
+    if (!meta) return;
+    const localTs = localStorage.getItem('hl_updated_at');
+    if (localTs && new Date(meta.updated_at) <= new Date(localTs)) return;
+    const { data: remote } = await supa
+      .from('user_data').select('*').eq('id', authUser.id).maybeSingle();
+    if (!remote) return;
+    DB.setIslands(remote.islands   || []);
+    DB.setSettings(remote.settings || { newPerDay: 20 });
+    DB.setHistory(remote.history   || {});
+    localStorage.setItem('hl_updated_at', remote.updated_at);
+    localStorage.setItem('hl_last_sync',  new Date().toISOString());
+    const el = document.getElementById('auth-last-sync');
+    if (el) el.textContent = new Date().toLocaleString('de');
+    renderDashboard();
+  } catch(e) { /* silent */ }
 }
 
 function updateAuthUI() {
