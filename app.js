@@ -747,10 +747,11 @@ function loadShadowIsland() {
 
 function renderShadowCard() {
   const s = shadow.sentences[shadow.idx];
-  document.getElementById('shadow-prog').textContent        = `${shadow.idx+1} / ${shadow.sentences.length}`;
-  document.getElementById('shadow-sentence').textContent    = s.target;
-  document.getElementById('shadow-translation').textContent = s.native || '';
-  document.getElementById('shadow-ipa').textContent         = '…';
+  document.getElementById('shadow-prog').textContent             = `${shadow.idx+1} / ${shadow.sentences.length}`;
+  document.getElementById('shadow-sentence').textContent         = s.target;
+  document.getElementById('shadow-translation-pre').textContent  = s.native || '';
+  document.getElementById('shadow-translation').textContent      = s.native || '';
+  document.getElementById('shadow-ipa').textContent              = '…';
 
   document.getElementById('shadow-sentence-wrap').classList.add('opacity-0');
   document.getElementById('shadow-rec-area').classList.add('hidden');
@@ -962,9 +963,11 @@ function showPronResult(html, score) {
   p3.classList.remove('hidden'); p3.classList.add('flex');
 
   const scoreBig = document.getElementById('pron-score-big');
-  scoreBig.textContent = score + '%';
-  scoreBig.className = 'text-5xl font-bold tabular-nums mb-1 ' + scoreClass;
-  document.getElementById('pron-score-label').textContent = label;
+  scoreBig.textContent = label;
+  scoreBig.className = 'text-xl font-semibold mb-0.5 ' + scoreClass;
+  const scoreLabel = document.getElementById('pron-score-label');
+  scoreLabel.textContent = score + '%';
+  scoreLabel.className = 'text-2xl font-bold tabular-nums mb-4 ' + scoreClass;
 
   const bar = document.getElementById('pron-bar');
   bar.style.backgroundColor = barColor;
@@ -977,14 +980,16 @@ function showPronResult(html, score) {
   setTimeout(() => pText.classList.remove('opacity-0'), 400);
 
   if (score >= 85) {
-    let secs = 2;
-    document.getElementById('shadow-auto-advance').classList.remove('hidden');
-    document.getElementById('shadow-auto-countdown').textContent = secs;
-    shadowAutoTimer = setInterval(() => {
-      secs--;
-      if (secs <= 0) { cancelShadowAutoAdvance(); shadowNext(); }
-      else document.getElementById('shadow-auto-countdown').textContent = secs;
-    }, 1000);
+    setTimeout(() => {
+      let secs = 4;
+      document.getElementById('shadow-auto-advance').classList.remove('hidden');
+      document.getElementById('shadow-auto-countdown').textContent = secs;
+      shadowAutoTimer = setInterval(() => {
+        secs--;
+        if (secs <= 0) { cancelShadowAutoAdvance(); shadowNext(); }
+        else document.getElementById('shadow-auto-countdown').textContent = secs;
+      }, 1000);
+    }, 800);
   }
 }
 
