@@ -49,6 +49,8 @@ function updateAuthUI() {
     if (displayName) { nameEl.textContent = displayName; nameEl.classList.remove('hidden'); }
     else { nameEl.classList.add('hidden'); }
     document.getElementById('auth-user-email').textContent = authUser.email;
+    const nameInput = document.getElementById('auth-name-input');
+    if (nameInput) nameInput.value = displayName || '';
     const ls = localStorage.getItem('hl_last_sync');
     document.getElementById('auth-last-sync').textContent =
       ls ? new Date(ls).toLocaleString('de') : 'Noch nie';
@@ -155,6 +157,21 @@ async function gateSignup() {
   else {
     err.style.color = '#34d399';
     err.textContent = '✓ Bestätigungs-E-Mail gesendet – bitte prüfen!';
+  }
+}
+
+async function saveDisplayName() {
+  const name   = document.getElementById('auth-name-input').value.trim();
+  const status = document.getElementById('auth-name-status');
+  status.style.color = ''; status.textContent = '';
+  if (!name) { status.style.color = '#f87171'; status.textContent = 'Bitte einen Namen eingeben.'; return; }
+  const { error } = await supa.auth.updateUser({ data: { display_name: name } });
+  if (error) { status.style.color = '#f87171'; status.textContent = error.message; }
+  else {
+    authUser.user_metadata = { ...authUser.user_metadata, display_name: name };
+    updateAuthUI();
+    status.textContent = '✓ Gespeichert!';
+    setTimeout(() => { status.textContent = ''; }, 3000);
   }
 }
 
