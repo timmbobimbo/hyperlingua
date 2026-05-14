@@ -37,17 +37,18 @@ Deno.serve(async (req) => {
 
   // Get or create credits
   let { data: row } = await supa
-    .from('user_credits').select('balance').eq('user_id', user.id).maybeSingle()
+    .from('user_credits').select('balance, is_admin').eq('user_id', user.id).maybeSingle()
 
   if (!row) {
     await supa.from('user_credits').insert({ user_id: user.id, balance: 500 })
-    row = { balance: 500 }
+    row = { balance: 500, is_admin: false }
   }
 
-  if (row.balance < cost) return json({ error: 'credits_exhausted', balance: row.balance }, 402)
+  const isAdmin = row.is_admin === true
+  if (!isAdmin && row.balance < cost) return json({ error: 'credits_exhausted', balance: row.balance }, 402)
 
-  const newBalance = row.balance - cost
-  await supa.from('user_credits').update({ balance: newBalance }).eq('user_id', user.id)
+  const newBalance = isAdmin ? row.balance : row.balance - cost
+  if (!isAdmin) await supa.from('user_credits').update({ balance: newBalance }).eq('user_id', user.id)
 
   const OAI_KEY   = Deno.env.get('OPENAI_API_KEY')!
   const AZ_KEY    = Deno.env.get('AZURE_SPEECH_KEY')!
@@ -64,7 +65,7 @@ Deno.serve(async (req) => {
       if (!res.ok) throw new Error('TTS ' + res.status)
       const buf = await res.arrayBuffer()
       const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)))
-      return json({ audio: b64, balance: newBalance })
+      return json({ audio: b64, balance: isAdmin ? -1 : newBalance })
     }
 
     if (action === 'whisper') {
@@ -81,7 +82,7 @@ Deno.serve(async (req) => {
       })
       if (!res.ok) throw new Error('Whisper ' + res.status)
       const data = await res.json()
-      return json({ text: data.text || '', balance: newBalance })
+      return json({ text: data.text || '', balance: isAdmin ? -1 : newBalance })
     }
 
     if (action === 'gpt-ipa' || action === 'gpt-dialogue' || action === 'gpt-generate') {
@@ -95,39 +96,50 @@ Deno.serve(async (req) => {
       })
       if (!res.ok) throw new Error('GPT ' + res.status)
       const data = await res.json()
-      return json({ ...data, balance: newBalance })
+      return json({ ...data, balance: isAdmin ? -1 : newBalance })
     }
 
     if (action === 'azure') {
       const { audioBase64, mimeType, language, referenceText } = body
       const bytes  = Uint8Array.from(atob(audioBase64), c => c.charCodeAt(0))
       const lang   = language?.includes('-') ? language : (language || 'en') + '-US'
-      const config = btoa(JSON.stringify({
+
+      // Use TextEncoder so non-ASCII referenceText encodes correctly before btoa
+      const configJson = JSON.stringify({
         ReferenceText: referenceText,
         GradingSystem: 'HundredMark',
-        Granularity: 'Word',
-        EnableMiscue: true
-      }))
-      const url = `https://${AZ_REGION}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${lang}&format=detailed`
+        Granularity: 'Phoneme',
+        Dimension: 'Comprehensive',
+        EnableMiscue: true,
+      })
+      const configBytes = new TextEncoder().encode(configJson)
+      let configBin = ''
+      for (let i = 0; i < configBytes.length; i++) configBin += String.fromCharCode(configBytes[i])
+      const config = btoa(configBin)
+
+      const url = `https://${AZ_REGION}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${lang}&format=detailed&profanity=raw`
+      const contentType = mimeType?.startsWith('audio/wav') ? 'audio/wav; codecs=audio/pcm; samplerate=16000' : (mimeType || 'audio/webm;codecs=opus')
       const res = await fetch(url, {
         method: 'POST',
         headers: {
           'Ocp-Apim-Subscription-Key': AZ_KEY,
-          'Content-Type': mimeType || 'audio/webm;codecs=opus',
+          'Content-Type': contentType,
           'Pronunciation-Assessment': config,
         },
         body: bytes
       })
-      if (!res.ok) throw new Error('Azure ' + res.status)
+      if (!res.ok) {
+        const errText = await res.text()
+        throw new Error('Azure ' + res.status + ' ' + errText)
+      }
       const data = await res.json()
-      return json({ ...data, balance: newBalance })
+      return json({ ...data, balance: isAdmin ? -1 : newBalance })
     }
 
     return json({ error: 'Unknown action' }, 400)
 
   } catch (e: unknown) {
-    // refund on error
-    await supa.from('user_credits').update({ balance: row.balance }).eq('user_id', user.id)
+    if (!isAdmin) await supa.from('user_credits').update({ balance: row.balance }).eq('user_id', user.id)
     const msg = e instanceof Error ? e.message : String(e)
     return json({ error: msg }, 500)
   }

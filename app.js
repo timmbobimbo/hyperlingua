@@ -68,13 +68,14 @@ function updateAuthUI() {
 }
 
 async function fetchCredits() {
-  const { data } = await supa.from('user_credits').select('balance').eq('user_id', authUser.id).maybeSingle();
-  updateCreditDisplay(data?.balance ?? '–');
+  const { data } = await supa.from('user_credits').select('balance, is_admin').eq('user_id', authUser.id).maybeSingle();
+  updateCreditDisplay(data?.is_admin ? -1 : (data?.balance ?? '–'));
 }
 
 function updateCreditDisplay(balance) {
   const el = document.getElementById('credit-balance');
-  if (el) el.textContent = balance + ' Credits';
+  if (!el) return;
+  el.textContent = balance === -1 ? '∞ Credits' : balance + ' Credits';
 }
 
 async function callProxy(action, params) {
